@@ -36,7 +36,7 @@ A repository query such as `findByShareIdAndExpiryTimeAfter` is an equally valid
 
 ### Time source
 
-The check uses the application clock (`Instant.now()`), while the cleanup function uses the DB clock. Small clock skew only shifts the cut-off by the skew; it does not reopen expired shares for longer than today's behaviour already allows. The comparison is `now >= expiry_time → expired`.
+The check uses the application clock (the injected `Clock` bean, which tests can control), while the cleanup function uses the DB clock. Small clock skew only shifts the cut-off by the skew; it does not reopen expired shares for longer than today's behaviour already allows. The comparison is `now >= expiry_time → expired`.
 
 ## Risks / Trade-offs
 
