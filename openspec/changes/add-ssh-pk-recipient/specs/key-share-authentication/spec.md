@@ -7,7 +7,7 @@ Defines how the shares server decides whether a caller may get a nonce for a key
 ## ADDED Requirements
 
 ### Requirement: Fork behaviour behind a feature flag
-The shares server SHALL have a configuration option `cdoc2.ruhnu.enabled`, default `false`. While it is `false`, every request SHALL produce the same response status as upstream, including the header and recipient-length checks that the upstream API document makes mandatory. SSH public key recipients, per-type expiry, refusal of expired shares and the release audit log SHALL apply only while it is `true`.
+The shares server SHALL have a configuration option `cdoc2.ruhnu.enabled`, default `false`. While it is `false`, every request SHALL produce the same response status as upstream, including the header and recipient-length checks that the upstream API document makes mandatory. SSH public key recipients, per-type expiry and the release audit log SHALL apply only while it is `true`.
 
 #### Scenario: Flag is off by default
 - **WHEN** the shares server starts without `cdoc2.ruhnu.enabled` configured

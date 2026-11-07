@@ -9,7 +9,7 @@ See `proposal.md` for motivation. This section covers only what the code does to
   - `GET /key-shares/{id}` validates the session token, then the auth token, and only then looks up the share. `AuthTokenVerifier.verify` requires an X.509 certificate chained to the trust store, an `etsi/` `iss`, and either Smart-ID RPv3 parameters or an RP-server RFC 9421 countersignature (`KeyShareApiService`, `ValidateAuthToken`).
 - **Authorisation is a string comparison** between the verified identity from the token and `key_material_share.recipient` (`VARCHAR(32)`, OpenAPI `maxLength: 32`).
 - **The OpenAPI document enforces header presence.** In `cdoc2-key-shares-openapi.yaml`, `x-cdoc2-auth-x5c`, `x-cdoc2-session-token` and `x-cdoc2-session-x5c` are `required: true`. The generated server layer rejects requests missing them with 400 before any service code runs.
-- **Expiry is one global pair**, `key-share.default-expiration-duration` and `key-share.max-expiration-duration`. `getExpiryTime` ignores the recipient. Expired rows are removed by a cron job (`ExpiredKeyShareCleanUpJob`), and share release does not check expiry itself.
+- **Expiry is one global pair**, `key-share.default-expiration-duration` and `key-share.max-expiration-duration`. `getExpiryTime` ignores the recipient. Expired rows are removed by a cron job (`ExpiredKeyShareCleanUpJob`). The prerequisite change `fix-expired-share-release` makes share lookup in both endpoints treat expired rows as not found (404), always on.
 - **Client side**: `KekTools.signShareAccessTokens` switches on SID/MID and passes an `IdentityJWSSigner` (a Nimbus `JWSSigner`) to `SidMidAuthTokenCreator`. That class also needs a `SessionToken`, both for nonce requests and for share requests. `RpClient` is required up front.
 - **Versions:** cdoc2-auth is Java 17 with nimbus-jose-jwt 10.9.1. cdoc2-shares-server is Java 21 and pins cdoc2-auth-token 0.8.3.
 - **Agent signing is proven.** `cdoc2-ssh/jws_probe` shows a P-256 key in ssh-agent producing a valid `ES256` JWS once the signature is re-encoded.
@@ -19,7 +19,7 @@ See `proposal.md` for motivation. This section covers only what the code does to
 **Goals:**
 - The phase 1 demo works end to end: `cdoc2-cli` encrypts to an SSH key, decrypts through ssh-agent, the shares server releases the shares, and they expire on the configured schedule.
 - With `cdoc2.ruhnu.enabled=false`, the shares server returns the same response status as upstream for every request.
-- With the flag on, the Smart-ID/Mobile-ID flow keeps working through the existing code in the existing order. The only difference for those recipients is that expired shares get 404 before the cleanup job removes them (D6).
+- With the flag on, the Smart-ID/Mobile-ID flow keeps working through the existing code in the existing order, with no difference for those recipients.
 - The new code sits behind boundaries that can be upstreamed without rework: a recipient type, a verifier in cdoc2-auth, and a flag-gated dispatch in the shares server.
 
 **Non-Goals:**
@@ -67,7 +67,8 @@ GET /key-shares/{id}
                                        (header checks, session token, auth token)
      both include the existing aud / shareId / nonce checks
      (wrong audience -> 401, unknown or expired nonce -> 404)
-  2. look up share (missing or expired = not found, D6)            -> 404
+  2. look up share (missing or expired = not found,
+     per fix-expired-share-release)                                 -> 404
   3. verified identity == stored recipient, else                   -> 404
 
 POST /key-shares/{id}/nonce
@@ -116,7 +117,7 @@ Whether this is a new token-creator class or `SidMidAuthTokenCreator` with an op
 
 `RpClient` and `AuthClient` checks move into the SID/MID branches only.
 
-### D6. Per-recipient-type expiry and refusal of expired shares (flag on)
+### D6. Per-recipient-type expiry (flag on)
 
 Add a `pk` lifetime pair beside the existing global pair, under the fork prefix:
 
@@ -129,9 +130,7 @@ cdoc2.ruhnu.pk.max-expiration-duration=P14D
 
 `getExpiryTime` takes the recipient and selects the pair by prefix when the flag is on. Phase 2 adds a `cdoc2.ruhnu.did.*` pair in the same shape.
 
-With the flag on, share lookup in both endpoints treats a row whose `expiry_time` has passed as absent, so the response is 404. That is the same status, at the same point in processing, as after the cleanup job has deleted the row. Clients cannot tell an expired row from a deleted one, and the cleanup schedule leaks nothing. 401 was rejected because the caller may be properly authenticated; the share simply no longer exists. The existing expired-nonce handling already uses 404.
-
-This check is a candidate to upstream on its own as a small fix, separate from SSH recipients.
+Shares stop working exactly at their expiry because of the prerequisite `fix-expired-share-release`, which is always on and not part of this change. The 14-day lifetime is therefore a hard bound, not "14 days plus one cleanup interval".
 
 ### D7. Schema and API widening
 
@@ -168,7 +167,7 @@ The rule: **flag off = upstream.** With the flag off, every request goes through
 
 So upstream clients see identical status codes. A `private/pk/` create is refused by the length check, exactly as upstream would refuse it.
 
-Behind the flag: D3 dispatch, the SSH verifier call, D6 per-type expiry and refusal of expired shares, and the release audit log.
+Behind the flag: D3 dispatch, the SSH verifier call, D6 per-type expiry, and the release audit log. The expiry refusal from `fix-expired-share-release` is not gated; it is treated as part of upstream.
 
 Not behind the flag:
 - The Liquibase changeset and the OpenAPI document, which can't be gated (D7).
@@ -176,7 +175,7 @@ Not behind the flag:
 
 Implementation keeps the gate in as few places as possible, ideally one branch per endpoint plus one in `getExpiryTime`. The upstream diff is then easy to read, and removing the flag after upstreaming is mechanical.
 
-Alternative considered: separate flags per feature (SSH recipients, expiry refusal, audit log). Rejected for the PoC, because one switch matches the "fork vs upstream" boundary, and the features can be split when they are upstreamed one by one.
+Alternative considered: separate flags per feature (SSH recipients, per-type expiry, audit log). Rejected for the PoC, because one switch matches the "fork vs upstream" boundary, and the features can be split when they are upstreamed one by one.
 
 ## Risks / Trade-offs
 

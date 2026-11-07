@@ -1,9 +1,5 @@
 # Spec Delta
 
-## Purpose
-
-Defines how long the shares server keeps a key share, per recipient type, so that recipients without other ways to revoke access lose it on a schedule the server operator controls.
-
 ## ADDED Requirements
 
 ### Requirement: Expiry configured per recipient type
@@ -35,18 +31,3 @@ When a client requests an expiry with `x-expiry-time`, the server SHALL use it i
 #### Scenario: Expiry reported to the client
 - **WHEN** the server creates any share
 - **THEN** the response's `x-expiry-time` header carries the expiry actually stored
-
-### Requirement: Expired shares cannot be fetched
-When the feature flag is on, the shares server SHALL treat a share whose expiry has passed as not found, for all recipient types, even if the cleanup job has not yet removed it. The nonce and get-share endpoints SHALL respond 404 Not Found at the point where they look up the share, as they do for a deleted share.
-
-#### Scenario: Fetch an expired SSH share
-- **WHEN** the flag is on and a caller requests a nonce for, or the contents of, a `private/pk/` share whose expiry has passed but which the cleanup job has not yet removed
-- **THEN** the server responds 404 Not Found, issues no nonce and returns no share
-
-#### Scenario: Fetch an expired Smart-ID/Mobile-ID share
-- **WHEN** the flag is on and an authenticated caller requests a nonce for, or the contents of, an `etsi/` share whose expiry has passed but which the cleanup job has not yet removed
-- **THEN** the server responds 404 Not Found, issues no nonce and returns no share
-
-#### Scenario: Upstream behaviour while off
-- **WHEN** the flag is off and an authenticated caller requests a share whose expiry has passed but which the cleanup job has not yet removed
-- **THEN** the server returns the share, as upstream

@@ -6,9 +6,11 @@ Today only Smart-ID and Mobile-ID users can open a CDOC2 key-shares recipient. E
 
 This is phase 1 of the CDOC2-ssh work. Its goal is a working end-to-end demo with boundaries shaped for later upstreaming. DID recipients (`private/did/...`) are phase 2 and a separate change.
 
+**Prerequisite:** `fix-expired-share-release` must be applied and archived first. This change relies on its guarantee that expired shares are refused with 404 straight away.
+
 ## What Changes
 
-- **Every shares-server behaviour change below sits behind the feature flag `cdoc2.ruhnu.enabled`, default OFF.** With the flag OFF, the shares server behaves like upstream. Two differences cannot be gated: the wider DB column, and the relaxed OpenAPI document. The client library, CLI and cdoc2-auth have no flag, because their changes only add code.
+- **Every shares-server behaviour change below sits behind the feature flag `cdoc2.ruhnu.enabled`, default OFF.** With the flag OFF, the shares server behaves like upstream, where upstream includes the always-on `fix-expired-share-release`. Two differences cannot be gated: the wider DB column, and the relaxed OpenAPI document. The client library, CLI and cdoc2-auth have no flag, because their changes only add code.
 - New key-shares recipient type for an SSH public key. `recipient_id` is `private/pk/<base64 OpenSSH public key blob>`, so the container names the key itself and no trust anchor or registry exists.
 - Phase 1 supports only ECDSA P-256 (`ecdsa-sha2-nistp256`) keys, signed as JWS `ES256`. Ed25519 and RSA are deferred.
 - `cdoc2-cli` can encrypt to an SSH public key and decrypt by signing the per-share auth token (SD-JWT) through ssh-agent (`$SSH_AUTH_SOCK`). The signature is a genuine JWS, not SSHSIG.
@@ -17,7 +19,6 @@ This is phase 1 of the CDOC2-ssh work. Its goal is a working end-to-end demo wit
   - The nonce endpoint issues nonces without a session token for shares whose stored recipient starts with `private/pk/`.
   - Smart-ID/Mobile-ID requests run through the existing code in the existing order.
 - When the flag is enabled, share expiry is configurable per recipient type, as a default and a maximum. For `private/pk/` both default to 14 days. Clients may request a shorter lifetime with `x-expiry-time`; longer requests are cut to the maximum.
-- When the flag is enabled, the shares server refuses expired shares with 404, as if the cleanup job had already removed them. This applies to all recipient types. Upstream releases expired shares until the cleanup job runs.
 - When the flag is enabled, the shares server logs every successful share release (audit trail).
 - Recipient length limits are widened (DB column, OpenAPI `maxLength`), because a P-256 `private/pk/` identifier is about 151 characters.
 - **Not in scope:** Ed25519/RSA keys, DID recipients, a revoke-now API (revocation is expiry, or deleting rows out of band), nonce rate limiting, SSH certificates/CA.
@@ -28,11 +29,9 @@ This is phase 1 of the CDOC2-ssh work. Its goal is a working end-to-end demo wit
 
 - `ssh-key-recipient`: the SSH public key recipient type. Covers the identifier format, the supported key types, and encrypting and decrypting with it in the client library and CLI, including signing through ssh-agent.
 - `key-share-authentication`: how the shares server authenticates nonce and share requests: the feature flag, choosing the path per recipient type, SSH public key verification, and the audit log of released shares.
-- `key-share-expiry`: server-side share lifetime per recipient type, covering the configurable default and maximum, client-requested shorter lifetimes, and refusal of expired shares.
-
 ### Modified Capabilities
 
-None. The store has no specs yet.
+- `key-share-expiry` (created by `fix-expired-share-release`): adds a configurable default and maximum share lifetime per recipient type, and client-requested shorter lifetimes.
 
 ## Impact
 
@@ -44,10 +43,8 @@ None. The store has no specs yet.
 - **cdoc2-shares-server**
   - The `cdoc2.ruhnu.*` configuration: the feature flag and the `pk` lifetimes.
   - Token-based dispatch in get-share, and header-based dispatch in nonce.
-  - The expiry check at share lookup, and the success audit log line.
+  - The success audit log line.
   - Header and recipient-length checks in code for flag OFF.
   - A Liquibase changeset widening `key_material_share.recipient`.
 - **cdoc2-openapi** (`cdoc2-key-shares-openapi.yaml`): recipient `maxLength` 32 → 255; `x-cdoc2-auth-x5c`, `x-cdoc2-session-token` and `x-cdoc2-session-x5c` change from required to optional; version bump. These only widen the API, so existing clients keep working.
-- **Smart-ID/Mobile-ID clients**:
-  - With the flag OFF, nothing changes.
-  - With the flag ON, the only difference is that expired shares get 404 immediately rather than after the cleanup job runs.
+- **Smart-ID/Mobile-ID clients**: no change, with the flag either OFF or ON.
