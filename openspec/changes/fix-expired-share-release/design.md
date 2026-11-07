@@ -34,6 +34,16 @@ A small helper in `KeyShareApiService` returns `Optional.empty()` when `expiry_t
 
 A repository query such as `findByShareIdAndExpiryTimeAfter` is an equally valid alternative. Choose whichever reads better in review; behaviour is the same.
 
+### Shares without an expiry time never expire
+
+Migration 009 added `expiry_time` as a nullable column with no backfill, so shares created before it have `NULL` there. The cleanup function never deletes them (`NULL < CURRENT_TIMESTAMP` is not true), so today they never expire. The helper keeps that: a `NULL` expiry counts as not expired. Comparing against it unguarded would throw, turning a working nonce request into a 500.
+
+**Alternatives considered:**
+- **Treat `NULL` as expired:** closes the gap, but old capsules would stop opening. That is a behaviour change beyond this fix.
+- **Backfill migration and `NOT NULL`:** cleaner data, but a schema change and a choice of backfill value that belong in their own change.
+
+Found in code review of the first implementation.
+
 ### Time source
 
 The check uses the application clock (the injected `Clock` bean, which tests can control), while the cleanup function uses the DB clock. Small clock skew only shifts the cut-off by the skew; it does not reopen expired shares for longer than today's behaviour already allows. The comparison is `now >= expiry_time → expired`.

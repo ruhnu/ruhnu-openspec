@@ -25,6 +25,10 @@ The shares server SHALL treat a share whose expiry time has passed as not found,
 - **WHEN** an authenticated caller requests a nonce for, or the contents of, a share whose expiry is in the future
 - **THEN** the server behaves as before this change
 
+#### Scenario: Share without an expiry time still served
+- **WHEN** an authenticated caller requests a nonce for a share that has no expiry time, because it was created before expiry times were recorded
+- **THEN** the server behaves as before this change, and the share does not expire
+
 #### Scenario: Authentication failures unchanged
 - **WHEN** an unauthenticated or wrongly authenticated caller requests an expired share
 - **THEN** the server responds with the same status it would give for an unexpired share, because authentication is checked before the share is looked up
