@@ -34,11 +34,15 @@ When the feature flag is enabled, the get-share endpoint SHALL verify an auth to
 
 #### Scenario: SSH token for a Smart-ID share
 - **WHEN** the flag is on and a caller requests a share whose recipient is `etsi/PNOEE-...` with a valid auth token signed by an SSH key, whose `iss` is that key's `private/pk/` identifier
-- **THEN** the server does not return the share, because the verified identity does not equal the stored recipient
+- **THEN** the server responds 404 Not Found and does not return the share, because the verified identity does not equal the stored recipient
 
 #### Scenario: Smart-ID credentials for an SSH share
 - **WHEN** the flag is on and a caller requests a share whose recipient is `private/pk/...` with a valid Smart-ID auth token, session token and certificate
-- **THEN** the server does not return the share, because the verified identity does not equal the stored recipient
+- **THEN** the server responds 404 Not Found and does not return the share, because the verified identity does not equal the stored recipient
+
+#### Scenario: Smart-ID token without session headers while on
+- **WHEN** the flag is on and a caller requests a share with an auth token whose `iss` does not start with `private/pk/`, without `x-cdoc2-session-token` or `x-cdoc2-session-x5c`
+- **THEN** the server responds 400 Bad Request, as upstream
 
 ### Requirement: Nonce for SSH public key shares
 When the feature flag is enabled, the nonce endpoint SHALL issue a nonce without a session token or certificate for a share whose stored recipient starts with `private/pk/`. Requests that carry session headers SHALL be handled by the existing path unchanged.
@@ -68,7 +72,7 @@ When the feature flag is enabled, the server SHALL release a `private/pk/` share
 
 #### Scenario: Token for another recipient
 - **WHEN** the token is validly signed but its `iss` names a different `private/pk/` key than the share's recipient
-- **THEN** the server does not return the share
+- **THEN** the server responds 404 Not Found and does not return the share
 
 #### Scenario: Unsupported algorithm
 - **WHEN** the token's JWS header `alg` is anything other than `ES256`, or the key in `iss` is not P-256

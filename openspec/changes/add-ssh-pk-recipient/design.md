@@ -61,17 +61,24 @@ With the flag on:
 ```
 GET /key-shares/{id}
   iss = unverified read of the token's "iss" (routing only)
-  if iss starts with "private/pk/":  SshPkAuthTokenVerifier   -> verified identity = iss
-  else:                              existing SID/MID path, existing order
-  then (both): look up share (expired = not found, D6),
-               require verified identity == stored recipient, aud / nonce checks
+  1. verify:
+       iss starts with "private/pk/":  SshPkAuthTokenVerifier          -> verified identity = iss
+       otherwise:                      existing SID/MID path, existing order
+                                       (header checks, session token, auth token)
+     both include the existing aud / shareId / nonce checks
+     (wrong audience -> 401, unknown or expired nonce -> 404)
+  2. look up share (missing or expired = not found, D6)            -> 404
+  3. verified identity == stored recipient, else                   -> 404
 
 POST /key-shares/{id}/nonce
-  session headers present:  existing path, unchanged
-  session headers absent:   look up share (expired = not found)
-                            recipient starts with "private/pk/" -> issue nonce
-                            otherwise                           -> 400
+  either session header present:  existing path, unchanged
+                                  (a missing second header -> 400, as upstream)
+  both session headers absent:    look up share (missing or expired -> 404)
+                                  recipient starts with "private/pk/" -> issue nonce
+                                  otherwise                           -> 400
 ```
+
+This is the existing order (verify, look up, compare), with the SSH verifier as an alternative in step 1. Each kind of failure therefore gets the same status code as upstream.
 
 Reading `iss` before verification is safe because the security decision is still the final comparison between the **verified** identity and the stored recipient, which already exists:
 - Forcing the SSH path for an `etsi/` share yields the verified identity `private/pk/<attacker key>`, which never equals the stored recipient.

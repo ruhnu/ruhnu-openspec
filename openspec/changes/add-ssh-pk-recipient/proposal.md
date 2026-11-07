@@ -13,7 +13,7 @@ This is phase 1 of the CDOC2-ssh work. Its goal is a working end-to-end demo wit
 - Phase 1 supports only ECDSA P-256 (`ecdsa-sha2-nistp256`) keys, signed as JWS `ES256`. Ed25519 and RSA are deferred.
 - `cdoc2-cli` can encrypt to an SSH public key and decrypt by signing the per-share auth token (SD-JWT) through ssh-agent (`$SSH_AUTH_SOCK`). The signature is a genuine JWS, not SSHSIG.
 - When the flag is enabled, the shares server accepts SSH public key recipients:
-  - The get-share endpoint chooses the verification path from the auth token's `iss` prefix. For `private/pk/` it verifies the token against the public key in `iss`, with no session token, X.509 certificate, Smart-ID RPv3 parameters or RP countersignature. Every path still ends with the existing check that the verified identity equals the share's stored recipient, followed by the audience, shareId and nonce checks.
+  - The get-share endpoint chooses the verification path from the auth token's `iss` prefix. For `private/pk/` it verifies the token against the public key in `iss`, with no session token, X.509 certificate, Smart-ID RPv3 parameters or RP countersignature. Every path verifies the token, including the existing audience, shareId and nonce checks, then requires the verified identity to equal the share's stored recipient.
   - The nonce endpoint issues nonces without a session token for shares whose stored recipient starts with `private/pk/`.
   - Smart-ID/Mobile-ID requests run through the existing code in the existing order.
 - When the flag is enabled, share expiry is configurable per recipient type, as a default and a maximum. For `private/pk/` both default to 14 days. Clients may request a shorter lifetime with `x-expiry-time`; longer requests are cut to the maximum.
