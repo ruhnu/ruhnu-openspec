@@ -40,14 +40,15 @@ Every task in this group is verified with the flag on, and with at least one tes
 
 - [x] 5.1 Add an option to `create` that takes an SSH recipient as a `.pub` path or an OpenSSH public key line (repeatable), and an option for the requested share lifetime. Verify: CLI tests create a container with an SSH recipient against mocked shares servers, and `info` shows the recipient type and identifier.
 - [x] 5.2 Add decryption through ssh-agent to `decrypt` for containers with an SSH recipient. Errors for no agent, key not in agent and agent refusal must be readable. Verify: CLI tests for success against mocked servers with a test-started agent, and for each error case.
-- [ ] 5.3 Document both options in the CLI README with an example using `ssh-add -L`. Verify: the documented commands run as written in the demo setup from group 6.
+- [x] 5.3 Document both options in the CLI README with an example using `ssh-add -L`. Verify: the documented commands run as written in the demo setup from group 6.
 
 ## 6. End-to-end demo
 
-- [ ] 6.1 Script a local demo environment: two shares servers (N_OF_N) with `cdoc2.ruhnu.enabled=true` and `cdoc2.ruhnu.pk.*` set short (e.g. `PT5M`), a test ssh-agent holding a P-256 key, and `cdoc2-cli` configured for both servers. Verify: the script brings the stack up from a clean checkout.
-- [ ] 6.2 Run the full flow: encrypt a secret to the agent key, decrypt it successfully, check that both servers logged the release, wait past expiry and confirm decryption fails with 404 before the cleanup job runs. Verify: a scripted run finishes with the expected success, then failure, and the audit lines are present.
-- [ ] 6.3 Show revocation by deleting the recipient's rows on one server (SQL) and confirming decryption fails immediately while the other server still holds its share. Verify: a scripted run shows the failure and names the refusing server.
+- [x] 6.1 Script a local demo environment: two shares servers (N_OF_N) with `cdoc2.ruhnu.enabled=true` and `cdoc2.ruhnu.pk.*` set short (e.g. `PT5M`), a test ssh-agent holding a P-256 key, and `cdoc2-cli` configured for both servers. Verify: the script brings the stack up from a clean checkout.
+- [x] 6.2 Run the full flow: encrypt a secret to the agent key, decrypt it successfully, check that both servers logged the release, wait past expiry and confirm decryption fails with 404 before the cleanup job runs. Verify: a scripted run finishes with the expected success, then failure, and the audit lines are present.
+- [x] 6.3 Show revocation by deleting the recipient's rows on one server (SQL) and confirming decryption fails immediately while the other server still holds its share. Verify: a scripted run shows the failure and names the refusing server.
 - [ ] 6.4 Confirm Smart-ID/Mobile-ID decryption against the modified shares server still works, with the flag off and on. Verify: the existing SID/MID end-to-end or integration tests pass unchanged in both modes.
+- [ ] 6.5 Make the shares-server suite pass with the flag on (`CDOC2_RUHNU_ENABLED=true mvn test`). Status on 2026-11-08: all Smart-ID/Mobile-ID tests pass with the flag on, but `KeyShareApiTests.shouldFailToCreateKeyShareWithTooLongRecipient` fails, because it expects a 68-character recipient to be refused (upstream 32-character limit), while with the flag on recipients up to 255 characters are allowed ("Recipient length" requirement). `RuhnuDisabledApiTests` also fails then, as it asserts flag-off behaviour. Options: keep these tests flag-off explicitly (`@TestPropertySource(properties = "cdoc2.ruhnu.enabled=false")`), or make the length test check both limits. Also note that the original `KeyShareApiAuthenticationTest` tests build the service themselves and always run with the flag off. Verify: the whole suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`, then decide 6.4.
 
 ## Workflow follow-up
 
