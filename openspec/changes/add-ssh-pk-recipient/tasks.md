@@ -38,8 +38,8 @@ Every task in this group is verified with the flag on, and with at least one tes
 
 ## 5. CLI (cdoc2-java-ref-impl/cdoc2-cli)
 
-- [ ] 5.1 Add an option to `create` that takes an SSH recipient as a `.pub` path or an OpenSSH public key line (repeatable), and an option for the requested share lifetime. Verify: CLI tests create a container with an SSH recipient against mocked shares servers, and `info` shows the recipient type and identifier.
-- [ ] 5.2 Add decryption through ssh-agent to `decrypt` for containers with an SSH recipient. Errors for no agent, key not in agent and agent refusal must be readable. Verify: CLI tests for success against mocked servers with a test-started agent, and for each error case.
+- [x] 5.1 Add an option to `create` that takes an SSH recipient as a `.pub` path or an OpenSSH public key line (repeatable), and an option for the requested share lifetime. Verify: CLI tests create a container with an SSH recipient against mocked shares servers, and `info` shows the recipient type and identifier.
+- [x] 5.2 Add decryption through ssh-agent to `decrypt` for containers with an SSH recipient. Errors for no agent, key not in agent and agent refusal must be readable. Verify: CLI tests for success against mocked servers with a test-started agent, and for each error case.
 - [ ] 5.3 Document both options in the CLI README with an example using `ssh-add -L`. Verify: the documented commands run as written in the demo setup from group 6.
 
 ## 6. End-to-end demo
@@ -55,3 +55,5 @@ Every task in this group is verified with the flag on, and with at least one tes
 - Archive the change once the demo works and the changes are reviewed.
 - Start the phase 2 change (`ruhnu/did/<did>/<jwk-thumbprint>`) from the decisions recorded in the explore session.
 - Rate limit the nonce endpoint for `ruhnu/pk/` shares, which issues nonces without authentication (design, Risks: table growth or DoS).
+- Explore decrypting without `key-shares.properties` (all key-shares recipients, not only SSH). Today the configured server list is an allowlist: a container's share URLs must be in it, and its truststore and timeouts are used. Options: bundled default server configuration (upstream publishes https://id.eesti.ee/config.json), or an explicit opt-in to trust the container's server URLs with system CAs. Weigh the risk that a crafted container makes the client contact attacker-chosen servers.
+- Decryption should not need `key-shares.servers.min_num`: for `N_OF_N` the container's share list already defines the shares needed, and all of them are fetched. Today the configured value is only checked in `Crypto.combineKek`, where it can only refuse containers with fewer shares (for example, encrypted with one shares server). Decide whether that is wanted client policy; otherwise derive the count from the container.
