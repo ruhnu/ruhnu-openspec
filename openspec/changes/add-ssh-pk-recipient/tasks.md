@@ -54,3 +54,4 @@ Every task in this group is verified with the flag on, and with at least one tes
 - Update `cdoc2-ssh/HANDOFF.md` with what the demo shows and what changed from the original pitch.
 - Archive the change once the demo works and the changes are reviewed.
 - Start the phase 2 change (`ruhnu/did/<did>/<jwk-thumbprint>`) from the decisions recorded in the explore session.
+- Rate limit the nonce endpoint for `ruhnu/pk/` shares, which issues nonces without authentication (design, Risks: table growth or DoS).
