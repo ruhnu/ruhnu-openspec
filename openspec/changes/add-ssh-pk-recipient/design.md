@@ -31,12 +31,14 @@ See `proposal.md` for motivation. This section covers only what the code does to
 
 ### D1. Identifier is the OpenSSH key blob, not a fingerprint
 
-`recipient_id = "private/pk/" + base64(OpenSSH wire blob)`.
+`recipient_id = "ruhnu/pk/" + base64(OpenSSH wire blob)`.
 
 - The OpenSSH wire format is canonical, so string comparison on the server is correct. It carries the key type and is what `ssh-add -L` and `.pub` files contain.
 - Putting the full key in the identifier lets the server verify without the client sending the key, and leaves no trust anchor to manage.
 
-Parsers MUST strip the `private/pk/` prefix rather than split on `/`, because standard base64 contains `/`.
+Parsers MUST strip the `ruhnu/pk/` prefix rather than split on `/`, because standard base64 contains `/`.
+
+The container stores these recipients with the FlatBuffers type `RUHNU`, which covers every fork-defined `ruhnu/<kind>/...` identifier: `ruhnu/pk/` now, `ruhnu/did/` in phase 2. The type alone does not say which kind a recipient is. Clients and the shares server therefore dispatch on the full `ruhnu/pk/` prefix, never on the type or on `ruhnu/` alone. A `RUHNU` recipient whose sub-prefix the client does not know is rejected as unsupported when decrypting. One type per vendor namespace, rather than one per kind, means later kinds add no schema change.
 
 Alternatives considered:
 - **SHA-256 fingerprint:** shorter, but the client then has to send the key, and the server can't verify anything from the share record alone.
@@ -62,7 +64,7 @@ With the flag on:
 GET /key-shares/{id}
   iss = unverified read of the token's "iss" (routing only)
   1. verify:
-       iss starts with "private/pk/":  SshPkAuthTokenVerifier          -> verified identity = iss
+       iss starts with "ruhnu/pk/":  SshPkAuthTokenVerifier          -> verified identity = iss
        otherwise:                      existing SID/MID path, existing order
                                        (header checks, session token, auth token)
      both include the existing aud / shareId / nonce checks
@@ -75,15 +77,15 @@ POST /key-shares/{id}/nonce
   either session header present:  existing path, unchanged
                                   (a missing second header -> 400, as upstream)
   both session headers absent:    look up share (missing or expired -> 404)
-                                  recipient starts with "private/pk/" -> issue nonce
+                                  recipient starts with "ruhnu/pk/" -> issue nonce
                                   otherwise                           -> 400
 ```
 
 This is the existing order (verify, look up, compare), with the SSH verifier as an alternative in step 1. Each kind of failure therefore gets the same status code as upstream.
 
 Reading `iss` before verification is safe because the security decision is still the final comparison between the **verified** identity and the stored recipient, which already exists:
-- Forcing the SSH path for an `etsi/` share yields the verified identity `private/pk/<attacker key>`, which never equals the stored recipient.
-- Forcing the SID/MID path for a `private/pk/` share needs a trusted X.509 certificate and yields an `etsi/` identity, which also never matches.
+- Forcing the SSH path for an `etsi/` share yields the verified identity `ruhnu/pk/<attacker key>`, which never equals the stored recipient.
+- Forcing the SID/MID path for a `ruhnu/pk/` share needs a trusted X.509 certificate and yields an `etsi/` identity, which also never matches.
 - The SSH verifier takes the key from the same `iss` it returns, so a token cannot verify under one key while claiming another.
 
 Smart-ID/Mobile-ID requests therefore keep upstream's order and status codes: authenticate first, then look up.
@@ -96,7 +98,7 @@ Alternatives considered:
 
 `SshPkAuthTokenVerifier.verify(token)`:
 1. Parse the SD-JWT. Require `typ` as for existing tokens and `alg == ES256`.
-2. Read `iss`. Require the `private/pk/` prefix. Decode the blob. Require key type `ecdsa-sha2-nistp256` and curve `nistp256`, and build an EC public key from the 65-byte uncompressed point.
+2. Read `iss`. Require the `ruhnu/pk/` prefix. Decode the blob. Require key type `ecdsa-sha2-nistp256` and curve `nistp256`, and build an EC public key from the 65-byte uncompressed point.
 3. Verify the JWS with Nimbus `ECDSAVerifier`.
 4. Decode the disclosures and return the single `aud` element together with `iss`, in the same response shape (nonce URI and identifier) that `ValidateAuthToken` already consumes.
 
@@ -124,7 +126,7 @@ Add a `pk` lifetime pair beside the existing global pair, under the fork prefix:
 ```
 key-share.default-expiration-duration=P1095D       # existing, upstream; all shares while the flag is off
 key-share.max-expiration-duration=P1825D
-cdoc2.ruhnu.pk.default-expiration-duration=P14D    # new; private/pk/ shares while the flag is on
+cdoc2.ruhnu.pk.default-expiration-duration=P14D    # new; ruhnu/pk/ shares while the flag is on
 cdoc2.ruhnu.pk.max-expiration-duration=P14D
 ```
 
@@ -138,7 +140,7 @@ Shares stop working exactly at their expiry because of the prerequisite `fix-exp
 
 | Location | Change |
 | --- | --- |
-| `components.schemas.KeyShare.recipient` | `maxLength` 32 → 255, description mentions `private/pk/<blob>` |
+| `components.schemas.KeyShare.recipient` | `maxLength` 32 → 255, description mentions `ruhnu/pk/<blob>` |
 | `getKeyShareByShareId` → `x-cdoc2-auth-x5c` | `required: true` → `false` |
 | `components.parameters.SessionTokenHeader`, `SessionX5cHeader` (shared by get-share and nonce) | `required: true` → `false` |
 | `info.version` | bump |
@@ -155,17 +157,17 @@ A second, fork-only API file was rejected: it would mean two sets of generated s
 
 **Liquibase:** a changeset widens `key_material_share.recipient` to `VARCHAR(255)`. It always runs; a wider column is harmless.
 
-**FlatBuffers:** a new `KeyShareRecipientType` value, `SSH_PK`, appended after `SID_MID` so existing ordinals are unchanged.
+**FlatBuffers:** a new `KeyShareRecipientType` value, `RUHNU`, appended after `SID_MID` so existing ordinals are unchanged. It is used for all `ruhnu/` identifiers (see D1).
 
 The OpenAPI module generates both the server stubs and the Java client, so the generated code in both repos must be rebuilt.
 
 ### D8. Feature flag `cdoc2.ruhnu.enabled` (shares server only)
 
 The rule: **flag off = upstream.** With the flag off, every request goes through the original code path in the original order. The server code also repeats the checks the OpenAPI document no longer enforces:
-- a missing `x-cdoc2-session-token` or `x-cdoc2-session-x5c` (nonce, get-share), or `x-cdoc2-auth-x5c` (get-share) → 400. This check runs on **every request that takes the SID/MID path**, whatever the flag says, so Smart-ID/Mobile-ID clients get upstream status codes in both modes. With the flag on, only `private/pk/` requests (D3) skip it.
+- a missing `x-cdoc2-session-token` or `x-cdoc2-session-x5c` (nonce, get-share), or `x-cdoc2-auth-x5c` (get-share) → 400. This check runs on **every request that takes the SID/MID path**, whatever the flag says, so Smart-ID/Mobile-ID clients get upstream status codes in both modes. With the flag on, only `ruhnu/pk/` requests (D3) skip it.
 - a recipient longer than 32 characters on create → 400 (flag off only).
 
-So upstream clients see identical status codes. A `private/pk/` create is refused by the length check, exactly as upstream would refuse it.
+So upstream clients see identical status codes. A `ruhnu/pk/` create is refused by the length check, exactly as upstream would refuse it.
 
 Behind the flag: D3 dispatch, the SSH verifier call, D6 per-type expiry, and the release audit log. The expiry refusal from `fix-expired-share-release` is not gated; it is treated as part of upstream.
 
@@ -182,7 +184,7 @@ Alternative considered: separate flags per feature (SSH recipients, per-type exp
 - **[Two server modes]** → Every shares-server behaviour has to be tested with the flag off (upstream behaviour unchanged) and on. The existing test suite must pass unchanged with the flag off.
 - **[Header checks move from generated code to hand-written code]** → If the flag-off checks miss a case, upstream behaviour changes silently. Mitigation: tests for each previously required header on each endpoint, with the flag off.
 - **[Nonce endpoint is unauthenticated for SSH shares]** → A nonce is useless without the private key and expires in 300 s. The risk is table growth or DoS. Accepted for the PoC; rate limiting is listed as follow-up.
-- **[`POST /key-shares` is unauthenticated (existing)]** → Anyone can create `private/pk/` shares when the flag is on. This grants no access to other shares; the risk is storage only, which already exists for `etsi/` recipients.
+- **[`POST /key-shares` is unauthenticated (existing)]** → Anyone can create `ruhnu/pk/` shares when the flag is on. This grants no access to other shares; the risk is storage only, which already exists for `etsi/` recipients.
 - **[Forwarded agents]** → Root on a remote host can ask a forwarded agent for signatures. `ssh-add -h` does not help (it refuses all non-user-auth signing, per `openssh_probe`). Document `ssh-add -c` or FIDO keys, and prefer decrypting locally.
 - **[Revocation is expiry only]** → Within the 14-day window, removing access requires deleting or expiring the recipient's rows on at least one shares server (N_OF_N, so one server suffices). Out-of-band SQL is acceptable for the demo.
 - **[Key rotation]** → A rotated key loses access to existing containers. The 14-day lifetime and the re-encrypt cadence bound this.
@@ -194,7 +196,7 @@ Alternative considered: separate flags per feature (SSH recipients, per-type exp
 - The Liquibase changeset widening `recipient` is backward compatible, and existing rows are unaffected.
 - The new `cdoc2.ruhnu.pk.*` properties have defaults, so no config change is needed.
 - Existing containers and clients are unaffected, because the new enum value is appended and the OpenAPI changes only widen the API.
-- Rollback: switch the flag off, or redeploy the previous server. With the flag off, `private/pk/` shares are unreachable because their requests lack session headers. With the previous server, they also cannot be read. Both only affect SSH shares.
+- Rollback: switch the flag off, or redeploy the previous server. With the flag off, `ruhnu/pk/` shares are unreachable because their requests lack session headers. With the previous server, they also cannot be read. Both only affect SSH shares.
 
 ## Open Questions
 

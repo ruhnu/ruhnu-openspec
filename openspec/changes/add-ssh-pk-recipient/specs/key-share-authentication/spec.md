@@ -14,7 +14,7 @@ The shares server SHALL have a configuration option `cdoc2.ruhnu.enabled`, defau
 - **THEN** the flag is off
 
 #### Scenario: SSH recipient refused while off
-- **WHEN** the flag is off and a client creates a share whose recipient is a `private/pk/` identifier
+- **WHEN** the flag is off and a client creates a share whose recipient is a `ruhnu/pk/` identifier
 - **THEN** the server responds 400 Bad Request and stores nothing
 
 #### Scenario: Missing session headers refused while off
@@ -26,29 +26,29 @@ The shares server SHALL have a configuration option `cdoc2.ruhnu.enabled`, defau
 - **THEN** the server returns the share
 
 #### Scenario: Flag on enables SSH recipients
-- **WHEN** the flag is on and a client creates a share whose recipient is a `private/pk/` identifier for a P-256 key
+- **WHEN** the flag is on and a client creates a share whose recipient is a `ruhnu/pk/` identifier for a P-256 key
 - **THEN** the server stores the share
 
 ### Requirement: Authentication path chosen by token issuer
-When the feature flag is enabled, the get-share endpoint SHALL verify an auth token whose `iss` starts with `private/pk/` as an SSH public key token, and any other token through the existing Smart-ID/Mobile-ID path in its existing order. On every path the server SHALL release the share only if the verified identity equals the share's stored recipient.
+When the feature flag is enabled, the get-share endpoint SHALL verify an auth token whose `iss` starts with `ruhnu/pk/` as an SSH public key token, and any other token through the existing Smart-ID/Mobile-ID path in its existing order. On every path the server SHALL release the share only if the verified identity equals the share's stored recipient.
 
 #### Scenario: SSH token for a Smart-ID share
-- **WHEN** the flag is on and a caller requests a share whose recipient is `etsi/PNOEE-...` with a valid auth token signed by an SSH key, whose `iss` is that key's `private/pk/` identifier
+- **WHEN** the flag is on and a caller requests a share whose recipient is `etsi/PNOEE-...` with a valid auth token signed by an SSH key, whose `iss` is that key's `ruhnu/pk/` identifier
 - **THEN** the server responds 404 Not Found and does not return the share, because the verified identity does not equal the stored recipient
 
 #### Scenario: Smart-ID credentials for an SSH share
-- **WHEN** the flag is on and a caller requests a share whose recipient is `private/pk/...` with a valid Smart-ID auth token, session token and certificate
+- **WHEN** the flag is on and a caller requests a share whose recipient is `ruhnu/pk/...` with a valid Smart-ID auth token, session token and certificate
 - **THEN** the server responds 404 Not Found and does not return the share, because the verified identity does not equal the stored recipient
 
 #### Scenario: Smart-ID token without session headers while on
-- **WHEN** the flag is on and a caller requests a share with an auth token whose `iss` does not start with `private/pk/`, without `x-cdoc2-session-token` or `x-cdoc2-session-x5c`
+- **WHEN** the flag is on and a caller requests a share with an auth token whose `iss` does not start with `ruhnu/pk/`, without `x-cdoc2-session-token` or `x-cdoc2-session-x5c`
 - **THEN** the server responds 400 Bad Request, as upstream
 
 ### Requirement: Nonce for SSH public key shares
-When the feature flag is enabled, the nonce endpoint SHALL issue a nonce without a session token or certificate for a share whose stored recipient starts with `private/pk/`. Requests that carry session headers SHALL be handled by the existing path unchanged.
+When the feature flag is enabled, the nonce endpoint SHALL issue a nonce without a session token or certificate for a share whose stored recipient starts with `ruhnu/pk/`. Requests that carry session headers SHALL be handled by the existing path unchanged.
 
 #### Scenario: Nonce without session token
-- **WHEN** the flag is on and a caller requests a nonce for an existing `private/pk/` share without session headers
+- **WHEN** the flag is on and a caller requests a nonce for an existing `ruhnu/pk/` share without session headers
 - **THEN** the server creates and returns a nonce for that share
 
 #### Scenario: Nonce without session token for a Smart-ID share
@@ -60,10 +60,10 @@ When the feature flag is enabled, the nonce endpoint SHALL issue a nonce without
 - **THEN** the server responds 404 Not Found
 
 ### Requirement: Share release for SSH public key shares
-When the feature flag is enabled, the server SHALL release a `private/pk/` share only if the token's `iss` equals the stored recipient, its JWS verifies with the key decoded from `iss`, and the existing audience, shareId and nonce checks pass. No session token, certificate, Smart-ID parameters or RP countersignature SHALL be required.
+When the feature flag is enabled, the server SHALL release a `ruhnu/pk/` share only if the token's `iss` equals the stored recipient, its JWS verifies with the key decoded from `iss`, and the existing audience, shareId and nonce checks pass. No session token, certificate, Smart-ID parameters or RP countersignature SHALL be required.
 
 #### Scenario: Valid SSH-signed token
-- **WHEN** the flag is on and a caller presents an `ES256` auth token for a `private/pk/` share, with `iss` equal to the share's recipient, signed by the matching private key, and with an `aud` naming this server, this share and an unexpired nonce issued for it
+- **WHEN** the flag is on and a caller presents an `ES256` auth token for a `ruhnu/pk/` share, with `iss` equal to the share's recipient, signed by the matching private key, and with an `aud` naming this server, this share and an unexpired nonce issued for it
 - **THEN** the server returns the share
 
 #### Scenario: Token signed by a different key
@@ -71,7 +71,7 @@ When the feature flag is enabled, the server SHALL release a `private/pk/` share
 - **THEN** the server responds 401 Unauthorized and does not return the share
 
 #### Scenario: Token for another recipient
-- **WHEN** the token is validly signed but its `iss` names a different `private/pk/` key than the share's recipient
+- **WHEN** the token is validly signed but its `iss` names a different `ruhnu/pk/` key than the share's recipient
 - **THEN** the server responds 404 Not Found and does not return the share
 
 #### Scenario: Unsupported algorithm
@@ -98,10 +98,10 @@ When the feature flag is enabled, the shares server SHALL log every successful s
 - **THEN** no release entry is written for that request
 
 ### Requirement: Recipient length
-When the feature flag is enabled, the shares server SHALL accept and store recipients of up to 255 characters, so that a `private/pk/` identifier for a P-256 key fits. While the flag is off, recipients longer than 32 characters SHALL be refused with 400 Bad Request, as upstream.
+When the feature flag is enabled, the shares server SHALL accept and store recipients of up to 255 characters, so that a `ruhnu/pk/` identifier for a P-256 key fits. While the flag is off, recipients longer than 32 characters SHALL be refused with 400 Bad Request, as upstream.
 
 #### Scenario: Create a share with a P-256 SSH recipient
-- **WHEN** the flag is on and a client creates a share whose recipient is a `private/pk/` identifier for a P-256 key
+- **WHEN** the flag is on and a client creates a share whose recipient is a `ruhnu/pk/` identifier for a P-256 key
 - **THEN** the server stores the share and later compares the full recipient, without truncating it
 
 #### Scenario: Long recipient while off

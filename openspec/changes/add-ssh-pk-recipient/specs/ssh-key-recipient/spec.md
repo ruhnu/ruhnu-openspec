@@ -7,11 +7,11 @@ Lets a CDOC2 container be encrypted to an SSH public key through the key-shares 
 ## ADDED Requirements
 
 ### Requirement: SSH public key recipient identifier
-An SSH public key recipient SHALL be stored as a key-shares recipient with its own recipient type and a `recipient_id` of the form `private/pk/<blob>`. `<blob>` is the standard base64 (with padding) of the OpenSSH public key wire blob, as in the second field of an OpenSSH `.pub` line. The same key SHALL always produce the same identifier.
+An SSH public key recipient SHALL be stored as a key-shares recipient with the recipient type `RUHNU` and a `recipient_id` of the form `ruhnu/pk/<blob>`. `RUHNU` covers all `ruhnu/<kind>/...` identifiers, and the kind SHALL be determined by the `recipient_id` prefix. `<blob>` is the standard base64 (with padding) of the OpenSSH public key wire blob, as in the second field of an OpenSSH `.pub` line. The same key SHALL always produce the same identifier.
 
 #### Scenario: Identifier built from an OpenSSH public key line
 - **WHEN** the user supplies `ecdsa-sha2-nistp256 AAAAE2VjZHNh... user@host` as the recipient key
-- **THEN** the recipient is stored with the SSH public key recipient type and `recipient_id` `private/pk/AAAAE2VjZHNh...`, without the key type prefix or comment
+- **THEN** the recipient is stored with the recipient type `RUHNU` and `recipient_id` `ruhnu/pk/AAAAE2VjZHNh...`, without the key type prefix or comment
 
 #### Scenario: Identifier is independent of the comment
 - **WHEN** the same public key is supplied twice with different comments
@@ -37,7 +37,7 @@ The CLI SHALL let the user encrypt a container to one or more SSH public keys gi
 
 #### Scenario: Encrypt to a key from a file
 - **WHEN** the user creates a container with an SSH recipient given as a path to a `.pub` file
-- **THEN** shares are uploaded to every configured shares server with recipient `private/pk/<blob>`, and the container's key-shares recipient lists those shares
+- **THEN** shares are uploaded to every configured shares server with recipient `ruhnu/pk/<blob>`, and the container's key-shares recipient lists those shares
 
 #### Scenario: Encrypt to a key given as text
 - **WHEN** the user creates a container with an SSH recipient given as an OpenSSH public key line, such as the output of `ssh-add -L`
@@ -57,6 +57,10 @@ The client SHALL decrypt an SSH public key recipient by signing each per-share a
 #### Scenario: No agent available
 - **WHEN** `$SSH_AUTH_SOCK` is unset or the socket cannot be connected
 - **THEN** decryption fails with an error stating that ssh-agent is not available
+
+#### Scenario: Unknown ruhnu recipient kind
+- **WHEN** the container has a `RUHNU` recipient whose `recipient_id` starts with `ruhnu/` but not with a kind this client supports, such as `ruhnu/xyz/...`
+- **THEN** decryption with that recipient fails with an error stating the recipient kind is unsupported, and no request is sent to any shares server
 
 #### Scenario: Agent refuses to sign
 - **WHEN** the agent refuses a sign request, for example because the user declined an `ssh-add -c` confirmation
