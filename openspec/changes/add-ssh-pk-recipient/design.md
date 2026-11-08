@@ -201,4 +201,4 @@ Alternative considered: separate flags per feature (SSH recipients, per-type exp
 ## Open Questions
 
 - The exact CLI option names for the SSH recipient and for agent-based decryption. They follow existing `cdoc2-cli` conventions and can be chosen during implementation.
-- The exact log format of the release audit line, for example whether it adds the caller IP. Any format that meets the spec is fine.
+- The exact log format of the release audit line, for example whether it adds the caller IP. Any format that meets the spec is fine. Decided during implementation: `Key share released: shareId=..., recipient=..., time=...`, where the recipient is `ruhnu/pk:SHA256:<fingerprint>` for SSH keys and `redacted` otherwise. Upstream removed personal identification codes from its logs (CDOC-261), so they are not logged here either. A keyed pseudonym (HMAC) for `etsi/` recipients was considered and rejected as an extra secret to manage.

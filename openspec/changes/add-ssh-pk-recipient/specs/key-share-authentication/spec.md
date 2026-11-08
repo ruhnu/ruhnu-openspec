@@ -87,11 +87,15 @@ When the feature flag is enabled, the server SHALL release a `ruhnu/pk/` share o
 - **THEN** the server responds 401 Unauthorized
 
 ### Requirement: Audit log of released shares
-When the feature flag is enabled, the shares server SHALL log every successful share release, for all recipient types. Each entry SHALL include the shareId, the recipient, and the time of release.
+When the feature flag is enabled, the shares server SHALL log every successful share release, for all recipient types. Each entry SHALL include the shareId, a recipient identifier, and the time of release. For a `ruhnu/pk/` recipient the recipient identifier SHALL be the key's OpenSSH SHA256 fingerprint, as shown by `ssh-keygen -l`. Any other recipient SHALL be logged as redacted, so that personal identification codes of `etsi/` recipients are not written to the log, as in upstream logging.
 
-#### Scenario: Release is logged
-- **WHEN** the flag is on and the server returns a share to a caller
-- **THEN** a log entry records the shareId, the recipient and the time of release
+#### Scenario: Release of an SSH public key share is logged
+- **WHEN** the flag is on and the server returns a `ruhnu/pk/` share to a caller
+- **THEN** a log entry records the shareId, the recipient key's SHA256 fingerprint and the time of release
+
+#### Scenario: Release of a Smart-ID share is logged without the identification code
+- **WHEN** the flag is on and the server returns an `etsi/` share to a caller
+- **THEN** a log entry records the shareId, a redacted recipient and the time of release, and the entry does not contain the personal identification code
 
 #### Scenario: Refusal is not logged as a release
 - **WHEN** the flag is on and the server refuses a share request
@@ -103,6 +107,10 @@ When the feature flag is enabled, the shares server SHALL accept and store recip
 #### Scenario: Create a share with a P-256 SSH recipient
 - **WHEN** the flag is on and a client creates a share whose recipient is a `ruhnu/pk/` identifier for a P-256 key
 - **THEN** the server stores the share and later compares the full recipient, without truncating it
+
+#### Scenario: Invalid SSH public key recipient
+- **WHEN** the flag is on and a client creates a share whose recipient starts with `ruhnu/pk/` but is not a P-256 OpenSSH public key in canonical form (padded standard base64), for example an Ed25519 key, a P-384 key, malformed base64 or a truncated blob
+- **THEN** the server responds 400 Bad Request and stores nothing
 
 #### Scenario: Long recipient while off
 - **WHEN** the flag is off and a client creates a share whose recipient is longer than 32 characters
