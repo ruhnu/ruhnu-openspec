@@ -70,8 +70,8 @@ cdoc2-auth gets three pieces, written so that client and server classify every r
 - a pure part: parse the DID, map it to a URL, and extract keys from the document (D3);
 - a fetcher built on `java.net.http.HttpClient`:
   - HTTPS only, `Redirect.NEVER`;
-  - connect and request timeouts, defaulting to 2 s and 5 s; the shares server takes its values from configuration (D7);
-  - a 64 KiB body limit;
+  - a connect timeout (default 2 s) and an overall deadline for the whole fetch, covering connect, headers and body (default 3 s), enforced with `sendAsync(...).get(deadline)`; the shares server takes its values from configuration (D7). The JDK's per-request timeout stops at the response headers, so on its own it would not catch a host that sends the body slowly;
+  - a 64 KiB body limit, enforced while the body is read;
   - the JDK default trust store;
   - `ProxySelector.getDefault()`, so the standard `https.proxyHost` settings work;
 - a result type with three outcomes:
@@ -175,7 +175,7 @@ GET /key-shares/{id}   flag on, unverified iss starts with "ruhnu/did/"
 Further limits:
 - The identifier parser already rejects IP-literal hosts (D1).
 - The fetcher does not follow redirects, caps the body size, and times out.
-- Timeouts are configurable: `cdoc2.ruhnu.did.connect-timeout` defaults to `PT2S`, and `cdoc2.ruhnu.did.request-timeout` to `PT5S`. They stay well below typical client read timeouts.
+- Timeouts are configurable: `cdoc2.ruhnu.did.connect-timeout` defaults to `PT2S`, and `cdoc2.ruhnu.did.request-timeout`, the overall deadline for one fetch, to `PT3S`. A get-share therefore answers within the client's default 5 s read timeout (`KeySharesConfigurationProps`), so a hanging DID host reaches the user as 503 and not as a client timeout.
 
 ### D8. Lifetimes: global pair (user decision)
 

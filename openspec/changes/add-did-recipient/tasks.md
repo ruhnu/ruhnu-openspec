@@ -34,14 +34,14 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - a test that a JWK containing `d` is ignored.
 - [ ] 2.3 Add the `did:web` resolver (design D2):
   - URL mapping;
-  - `java.net.http.HttpClient` with HTTPS only, `Redirect.NEVER`, connect and request timeouts, a 64 KiB body limit, the JDK trust store and `ProxySelector.getDefault()`;
+  - `java.net.http.HttpClient` with HTTPS only, `Redirect.NEVER`, a connect timeout and an overall deadline covering the body (D2), a 64 KiB body limit, the JDK trust store and `ProxySelector.getDefault()`;
   - a host predicate checked before any request;
   - the `Found`/`NotFound`/`Unavailable` outcomes;
   - an injectable `HttpClient` for tests.
 
   Verify: tests against a local `HttpsServer` with a test `SSLContext`, covering:
   - every scenario of "Resolving a did:web DID" (path, no path, port, 404 and 410, a redirect whose target receives no request, an `id` mismatch);
-  - refused connection, timeout, 5xx, 429 and an untrusted certificate, all `Unavailable`;
+  - refused connection, timeout, a body that arrives too slowly, 5xx, 429 and an untrusted certificate, all `Unavailable`;
   - an oversized body, `NotFound`;
   - a refusing host predicate, with no request sent.
 - [ ] 2.4 Add an optional header JWK to `AuthTokenCreator` (design D5). Verify: a token created with it has a protected `jwk` header with only public members and verifies with that key, and the existing `AuthTokenCreator` tests pass unchanged.
@@ -54,7 +54,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - there is exactly one `aud` disclosure;
   - it returns the nonce URI and `iss`.
 
-  Verify: unit tests for a valid token, a token signed through `SshAgentJWSSigner` with a test agent, a missing `jwk`, a P-384 or RSA `jwk`, a fingerprint mismatch, a signature by another key, `alg` RS256/none, a tampered payload, and zero or two `aud` elements.
+  Verify: unit tests for a valid token, a missing `jwk`, a P-384 or RSA `jwk`, a fingerprint mismatch, a signature by another key, `alg` RS256/none, a tampered payload, and zero or two `aud` elements. A token signed through ssh-agent is checked in 4.4 instead, because `SshAgentJWSSigner` lives in cdoc2-lib.
 - [ ] 2.6 Bump the cdoc2-auth snapshot version and add a CHANGELOG entry. Verify: `mvn install` succeeds, including checkstyle and spotbugs.
 
 ## 3. Shares server (cdoc2-shares-server)
@@ -62,7 +62,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
 Every task in this group is verified with the flag on, and with at least one test showing that DID behaviour is absent with the flag off. Tests use a local HTTPS DID host stub that counts the requests it receives.
 
 - [ ] 3.1 Switch to the new cdoc2-auth snapshot and the regenerated OpenAPI stubs. Verify: the server builds, and the existing suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`.
-- [ ] 3.2 Add the `cdoc2.ruhnu.did.allowed-hosts` property (list, default empty), and `cdoc2.ruhnu.did.connect-timeout` and `cdoc2.ruhnu.did.request-timeout` (defaults `PT2S` and `PT5S`), to `RuhnuConfigProperties`. Wire a resolver bean that uses the allowlist as its host predicate (design D7). Verify: binding tests for the defaults and for overrides, following `RuhnuPkExpiryConfigTests`.
+- [ ] 3.2 Add the `cdoc2.ruhnu.did.allowed-hosts` property (list, default empty), and `cdoc2.ruhnu.did.connect-timeout` and `cdoc2.ruhnu.did.request-timeout` (defaults `PT2S`, and `PT3S` as the overall deadline, design D7), to `RuhnuConfigProperties`. Wire a resolver bean that uses the allowlist as its host predicate (design D7). Verify: binding tests for the defaults and for overrides, following `RuhnuPkExpiryConfigTests`.
 - [ ] 3.3 Create validation (design D7): with the flag on, refuse a `ruhnu/did/` recipient that fails identifier validation, or whose host and port are not allowlisted, with 400, storing nothing. Verify: tests for every create scenario under "DID host allowlist", plus "DID recipient refused while off" and "Flag on enables DID recipients".
 - [ ] 3.4 Nonce endpoint: accept `ruhnu/did/` shares on the session-less path, without resolving the DID. Verify:
   - a test issues a nonce for a DID share while the stub is stopped, and the stub receives no request;
@@ -102,7 +102,7 @@ Every task in this group is verified with the flag on, and with at least one tes
   - token with `iss = recipient_id` and the agent key as header `jwk`, signed through ssh-agent;
   - get-share 404 and 503 mapped to the messages in the spec.
 
-  Verify: a WireMock test with a test agent checks the token's `jwk`, `iss` and fingerprint, and checks both error messages.
+  Verify: a WireMock test with a test agent checks the token's `jwk`, `iss` and fingerprint, verifies the agent-signed token with cdoc2-auth's DID token verifier (moved here from 2.5), and checks both error messages.
 
 ## 5. CLI (cdoc2-java-ref-impl/cdoc2-cli)
 
@@ -118,17 +118,17 @@ Every task in this group is verified with the flag on, and with at least one tes
 
 ## 6. End-to-end demo
 
-- [ ] 6.1 Extend the phase 1 demo:
-  - add a local HTTPS DID host serving `did.json` for `did:web:<host>:p:alice`, which lists the test agent key under `authentication`;
-  - add that host to the allowlist of both shares servers;
-  - make the CLI and both servers trust the demo CA through a truststore.
+- [ ] 6.1 Add a scripted demo in `cdoc2-java-ref-impl/test/ruhnu-demo/`. No phase 1 demo script exists in any repo to extend. The demo:
+  - starts two shares servers (flag on) and a local HTTPS DID host serving `did.json` for `did:web:localhost%3A8444:p:alice`, which lists the test agent key under `authentication`;
+  - adds that host to the allowlist of both shares servers;
+  - makes the CLI and both servers trust the DID host's certificate through a JVM truststore.
 
   Verify: the script brings the stack up from a clean checkout, and the CLI's resolver fetches the document.
 - [ ] 6.2 Run the full flow: encrypt a secret to the DID, decrypt it, and check that both servers logged the release with the `ruhnu/did/` recipient. Verify: a scripted run succeeds and the audit lines are present.
 - [ ] 6.3 Revocation: remove the key from `did.json`, confirm decryption fails at once with the "no longer listed" message, then restore the key and confirm decryption works again. Verify: a scripted run shows failure, then success.
 - [ ] 6.4 Outage: stop the DID host, confirm decryption fails with the "could not reach the DID host" message, then restart it and confirm decryption works. Verify: a scripted run shows failure, then success.
 - [ ] 6.5 Compromised host: add a second P-256 key, not held by the test agent, to `did.json`. Confirm that an agent holding only that key cannot decrypt the existing container. Confirm also that a token for an existing share, signed by that key with its own DID identifier, is refused with 404. Verify: a scripted run shows both refusals.
-- [ ] 6.6 Regression check: the phase 1 `ruhnu/pk/` demo flow still passes, and the shares-server suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`. Verify: both runs pass.
+- [ ] 6.6 Regression check: the phase 1 `ruhnu/pk/` encrypt and decrypt flow passes in the same demo, and the shares-server suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`. Verify: both runs pass.
 
 ## Workflow follow-up
 
