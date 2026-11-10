@@ -7,9 +7,9 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
 - [x] 1.1 Add `cdoc2-cli/docker/Dockerfile` (design D1), with no `USER` and `WORKDIR /work`. Stage the shaded jar as `cdoc2-cli/target/docker/cdoc2-cli.jar` with the Dockerfile next to it (D2), and build the image locally. Verify: `docker run --rm <image> --version` prints the `cdoc2-cli` version from the pom and exits 0, and a failing command (`decrypt -f /nonexistent`) exits non-zero.
 - [x] 1.2 Create the fixture `cdoc2-cli/docker/smoke-test/ssh-recipient.cdoc2` with ruhnu-demo: encrypt a short text file to a fresh throwaway P-256 key, then delete the private key. Verify: `info -f` on the fixture shows one SSH public key recipient, and the fixture is under 10 KB.
 - [x] 1.3 Add `cdoc2-cli/docker/smoke-test.sh <image>` (D4): check `--version`; with a throwaway agent and `--network none`, expect `No matching key found in ssh-agent` and a non-zero exit; without the socket, expect `ssh-agent is not available`. Verify: the script passes against the local image, and fails when the agent socket mount is removed from the second check.
-- [x] 1.4 Add a "Docker image" section to `cdoc2-cli/README.md`:
+- [x] 1.4 Add a "Docker image" section to `cdoc2-cli/README-ruhnu.md`. (2026-11-10, on the user's request: the SSH recipient section was also moved there from `cdoc2-cli/README.md`, which now only links to it, and the shell function was renamed `ruhnu`.) The section contains:
   - `docker run` for `create --ssh-pubkey` and `decrypt --ssh-agent`, with `--user $(id -u):$(id -g)`, the agent socket at `/ssh-agent.sock`, `SSH_AUTH_SOCK`, and the mounted working and config directories
-  - a `cdoc2` shell alias
+  - a `ruhnu` shell function
   - the note that only SSH recipients are supported in the image
   - the advice on dedicated agents and `ssh-add -c`
   - the local build steps from 1.1

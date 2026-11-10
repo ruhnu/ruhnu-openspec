@@ -13,7 +13,7 @@ An investigation on 2026-11-10 showed that this works without changes to the CLI
 - The image records the exact commits of the sibling repos built into it (`cdoc2-auth`, `cdoc2-openapi`). The siblings are built from branch names, so the tag alone doesn't identify them. Pinning those inputs is a follow-up.
 - The image runs `cdoc2-cli` as its entrypoint, so `docker run ghcr.io/ruhnu/ruhnu-cli <args>` takes the same arguments as `java -jar cdoc2-cli.jar <args>`.
 - The supported use is the SSH public key recipient: encrypt to an SSH key, and decrypt through the host ssh-agent with its socket mounted into the container.
-- The CLI README documents how to run the image, including the agent socket, the container user and a `cdoc2` shell alias.
+- `cdoc2-cli/README-ruhnu.md` documents how to run the image, including the agent socket, the container user and a `ruhnu` shell function. The fork-only CLI documentation (SSH recipients and the image) lives in that file, and `cdoc2-cli/README.md` only links to it, to keep upstream merges cheap.
 - **Not in scope:**
   - Smart-ID, Mobile-ID and PKCS#11/ID-card in the image. The jar still contains that code, but the image doesn't have to support it, and it isn't tested there.
   - A GraalVM native image.
@@ -36,6 +36,6 @@ None. `ssh-key-recipient` describes what the CLI does, and that is unchanged; th
   - a new Dockerfile for `cdoc2-cli`
   - a new GitHub Actions workflow triggered by `v*` and `dev-*` tags, with a pinned-refs file for the sibling repos it builds first (`cdoc2-openapi`, `cdoc2-auth`), as in cdoc2-shares-server
   - a test fixture for the image smoke test
-  - a README section in `cdoc2-cli`
+  - `cdoc2-cli/README-ruhnu.md`, with the SSH recipient documentation moved there from `cdoc2-cli/README.md`
 - **GitHub:** a new package `ruhnu-cli` in the `ruhnu` organisation on ghcr.io. Its visibility is set once by hand, as for the shares-server packages.
 - **CLI code and other repos:** no change.
