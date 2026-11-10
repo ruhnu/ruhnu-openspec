@@ -27,7 +27,7 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
   - build and push linux/amd64 and linux/arm64 with OCI labels and `index:` annotations, including the sibling commits read from the checkouts (`io.github.ruhnu.cdoc2-auth.revision`, `io.github.ruhnu.cdoc2-openapi.revision`)
 
   Verify: `actionlint`, if available, reports nothing, and a review against the shares-server workflow finds no unexplained differences. (2026-11-10: actionlint was not available in the sandbox. The workflow was parsed with SnakeYAML and all step and job output references resolve; the diff review found only the D1, D3 and D6 differences and `-DskipTests`.)
-- [ ] 2.3 With the user's go-ahead, push the branch and a tag `dev-cli-image-1` to `ruhnu/cdoc2-java-ref-impl`. Verify:
+- [x] 2.3 With the user's go-ahead, push the branch and a tag `dev-cli-image-1` to `ruhnu/cdoc2-java-ref-impl`. Verify:
   - the workflow passes
   - `docker buildx imagetools inspect ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` lists linux/amd64 and linux/arm64, with version `dev-cli-image-1` and the tagged commit as revision
   - the sibling revision labels and annotations equal `git ls-remote` of `feat/add-ssh-pk-recipient` in ruhnu/cdoc2-auth and ruhnu/cdoc2-openapi at the time of the run
@@ -37,8 +37,8 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
 
 ## 3. Integration checks with the published image
 
-- [ ] 3.1 Make the `ruhnu-cli` package public on ghcr.io (by hand, done by the user). Verify: an anonymous `docker pull ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` succeeds after `docker logout ghcr.io`.
-- [ ] 3.2 Run the README commands from 1.4 against ruhnu-demo with the published image instead of the local one. Verify: encryption, decryption through the host agent, the audit lines and the "agent socket not mounted" error all behave as in 1.4.
+- [x] 3.1 Make the `ruhnu-cli` package public on ghcr.io (by hand, done by the user). Verify: an anonymous `docker pull ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` succeeds after `docker logout ghcr.io`.
+- [x] 3.2 Run the README commands from 1.4 against ruhnu-demo with the published image instead of the local one. Verify: encryption, decryption through the host agent, the audit lines and the "agent socket not mounted" error all behave as in 1.4.
 - [ ] 3.3 On an arm64 host, if one is available, run `smoke-test.sh` against the published tag. Verify: the script passes, and `docker image inspect` shows `arm64`. If no arm64 host is available, record that in this task and leave it unchecked.
 
 ## Workflow follow-up
