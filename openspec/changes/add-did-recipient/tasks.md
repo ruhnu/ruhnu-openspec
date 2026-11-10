@@ -118,7 +118,7 @@ Every task in this group is verified with the flag on, and with at least one tes
 
 ## 6. End-to-end demo
 
-- [x] 6.1 Add a scripted demo in `cdoc2-java-ref-impl/test/ruhnu-demo/`. No phase 1 demo script exists in any repo to extend. The demo:
+- [x] 6.1 Extend the phase 1 demo in the `ruhnu-demo` repo (branch `feat/add-did-recipient`): `up.sh` also starts an nginx DID host, and the new `did.sh` runs the DID steps. A first version lived in `cdoc2-java-ref-impl/test/ruhnu-demo/` before the `ruhnu-demo` repo was found, and was moved there. The demo:
   - starts two shares servers (flag on) and a local HTTPS DID host serving `did.json` for `did:web:localhost%3A8444:p:alice`, which lists the test agent key under `authentication`;
   - adds that host to the allowlist of both shares servers;
   - makes the CLI and both servers trust the DID host's certificate through a JVM truststore.
@@ -128,7 +128,7 @@ Every task in this group is verified with the flag on, and with at least one tes
 - [x] 6.3 Revocation: remove the key from `did.json`, confirm decryption fails at once with the "no longer listed" message, then restore the key and confirm decryption works again. Verify: a scripted run shows failure, then success.
 - [x] 6.4 Outage: stop the DID host, confirm decryption fails with the "could not reach the DID host" message, then restart it and confirm decryption works. Verify: a scripted run shows failure, then success.
 - [x] 6.5 Compromised host: add a second P-256 key, not held by the test agent, to `did.json`. Confirm that an agent holding only that key cannot decrypt the existing container. Confirm also that a token for an existing share, signed by that key with its own DID identifier, is refused with 404. Verify: a scripted run shows both refusals.
-- [x] 6.6 Regression check: the phase 1 `ruhnu/pk/` encrypt and decrypt flow passes in the same demo, and the shares-server suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`. Verify: both runs pass.
+- [x] 6.6 Regression check: the phase 1 `ruhnu/pk/` flow (`demo.sh` with expiry, `revoke.sh`) passes on the same stack, and the shares-server suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`. Verify: both runs pass.
 
 ## Workflow follow-up
 
