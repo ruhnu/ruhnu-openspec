@@ -4,7 +4,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
 
 ## 1. API (cdoc2-openapi)
 
-- [ ] 1.1 In `cdoc2-key-shares-openapi.yaml`, apply the D10 edits:
+- [x] 1.1 In `cdoc2-key-shares-openapi.yaml`, apply the D10 edits:
   - get-share: add `503`;
   - descriptions: `KeyShare.recipient` mentions `ruhnu/did/<did>/hash/<fingerprint>`, and `x-cdoc2-auth-token` mentions the `jwk` header for DID tokens;
   - bump `info.version`.
@@ -13,7 +13,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
 
 ## 2. DID identifier, resolver and verifier (cdoc2-auth)
 
-- [ ] 2.1 Add parsing, building and validation of `ruhnu/did/<did>/hash/<fingerprint>` identifiers (design D1):
+- [x] 2.1 Add parsing, building and validation of `ruhnu/did/<did>/hash/<fingerprint>` identifiers (design D1):
   - `did:web` syntax, with IP-literal hosts rejected and `%3A<port>` and `:<segment>` parts allowed;
   - a canonical 43-character base64url fingerprint;
   - at most 255 characters in total;
@@ -23,7 +23,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - building the identifier for a fixture key, whose fingerprint equals `ssh-keygen -l` on its `.pub` with `+/` replaced by `-_`;
   - rejection of `did:key`, an IP host, an extra path segment, a padded, short or non-canonical fingerprint, and an identifier over 255 characters;
   - acceptance of a port.
-- [ ] 2.2 Add P-256 JWK to OpenSSH blob conversion and DID document key extraction (design D3):
+- [x] 2.2 Add P-256 JWK to OpenSSH blob conversion and DID document key extraction (design D3):
   - `authentication` entries as absolute references, `#frag` references and embedded methods;
   - the `controller == DID` check;
   - JWKs with `d` and non-P-256 keys ignored, with unsupported keys reported separately for the CLI.
@@ -32,7 +32,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - unit tests for every scenario in `specs/did-recipient/spec.md`, requirement "Keys listed by a DID document";
   - a test that the JWK of the fixture key gives the same fingerprint as its OpenSSH blob;
   - a test that a JWK containing `d` is ignored.
-- [ ] 2.3 Add the `did:web` resolver (design D2):
+- [x] 2.3 Add the `did:web` resolver (design D2):
   - URL mapping;
   - `java.net.http.HttpClient` with HTTPS only, `Redirect.NEVER`, a connect timeout and an overall deadline covering the body (D2), a 64 KiB body limit, the JDK trust store and `ProxySelector.getDefault()`;
   - a host predicate checked before any request;
@@ -44,8 +44,8 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - refused connection, timeout, a body that arrives too slowly, 5xx, 429 and an untrusted certificate, all `Unavailable`;
   - an oversized body, `NotFound`;
   - a refusing host predicate, with no request sent.
-- [ ] 2.4 Add an optional header JWK to `AuthTokenCreator` (design D5). Verify: a token created with it has a protected `jwk` header with only public members and verifies with that key, and the existing `AuthTokenCreator` tests pass unchanged.
-- [ ] 2.5 Add the DID auth token verifier (design D6 step 1):
+- [x] 2.4 Add an optional header JWK to `AuthTokenCreator` (design D5). Verify: a token created with it has a protected `jwk` header with only public members and verifies with that key, and the existing `AuthTokenCreator` tests pass unchanged.
+- [x] 2.5 Add the DID auth token verifier (design D6 step 1):
   - `typ`, and `alg == ES256` only;
   - `iss` parses as a DID identifier;
   - `jwk` is present and is a public P-256 key;
@@ -55,7 +55,7 @@ Prerequisite: in each of the four repos, branch from `feat/add-ssh-pk-recipient`
   - it returns the nonce URI and `iss`.
 
   Verify: unit tests for a valid token, a missing `jwk`, a P-384 or RSA `jwk`, a fingerprint mismatch, a signature by another key, `alg` RS256/none, a tampered payload, and zero or two `aud` elements. A token signed through ssh-agent is checked in 4.4 instead, because `SshAgentJWSSigner` lives in cdoc2-lib.
-- [ ] 2.6 Bump the cdoc2-auth snapshot version and add a CHANGELOG entry. Verify: `mvn install` succeeds, including checkstyle and spotbugs.
+- [x] 2.6 Bump the cdoc2-auth snapshot version and add a CHANGELOG entry. Verify: `mvn install` succeeds, including checkstyle and spotbugs.
 
 ## 3. Shares server (cdoc2-shares-server)
 
