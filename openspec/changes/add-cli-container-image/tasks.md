@@ -33,13 +33,13 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
   - the sibling revision labels and annotations equal `git ls-remote` of `feat/add-ssh-pk-recipient` in ruhnu/cdoc2-auth and ruhnu/cdoc2-openapi at the time of the run
   - `latest` does not exist or is unchanged
   - a branch push with no tag starts no run of this workflow
-- [ ] 2.4 Check that a broken image is not published: on a throwaway tag `dev-cli-image-broken`, make the smoke test fail, for example with a wrong expected message in a commit on a scratch branch. Verify: the run fails, and no `dev-cli-image-broken` image exists on ghcr.io. Afterwards, delete the tag and the scratch branch.
+- [x] 2.4 Check that a broken image is not published: on a throwaway tag `dev-cli-image-broken`, make the smoke test fail, for example with a wrong expected message in a commit on a scratch branch. Verify: the run fails, and no `dev-cli-image-broken` image exists on ghcr.io. Afterwards, delete the tag and the scratch branch.
 
 ## 3. Integration checks with the published image
 
 - [x] 3.1 Make the `ruhnu-cli` package public on ghcr.io (by hand, done by the user). Verify: an anonymous `docker pull ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` succeeds after `docker logout ghcr.io`.
 - [x] 3.2 Run the README commands from 1.4 against ruhnu-demo with the published image instead of the local one. Verify: encryption, decryption through the host agent, the audit lines and the "agent socket not mounted" error all behave as in 1.4.
-- [ ] 3.3 On an arm64 host, if one is available, run `smoke-test.sh` against the published tag. Verify: the script passes, and `docker image inspect` shows `arm64`. If no arm64 host is available, record that in this task and leave it unchecked.
+- [ ] 3.3 On an arm64 host, if one is available, run `smoke-test.sh` against the published tag. Verify: the script passes, and `docker image inspect` shows `arm64`. If no arm64 host is available, record that in this task and leave it unchecked. (2026-11-10: postponed by the user until after the demo. To be run on the user's arm64 Oracle VM against `ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1`.)
 
 ## Workflow follow-up
 
