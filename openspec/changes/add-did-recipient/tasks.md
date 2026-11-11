@@ -139,6 +139,9 @@ Every task in this group is verified with the flag on, and with at least one tes
 - [x] 7.5 cdoc2-java-ref-impl: a nonce 404 (share expired or deleted) gives a readable error instead of a stack trace; the create 400 hint no longer blames the DID host outright; a malformed `ruhnu/` recipient in a container is reported, not silently skipped; `SshDidEncryptionKeyMaterial` refuses a zero or negative lifetime; README lifetimes for DID shares (3 years by default, at most 5); CHANGELOG entry. Verify: lib and CLI tests.
 - [x] 7.6 cdoc2-java-ref-impl tests: RUHNU `ruhnu/did/` round-trip through the container header; the "no request" and "no upload" assertions for malformed recipients and DID failures can fail.
 - [ ] 7.7 Before merging cdoc2-shares-server#6 and cdoc2-java-ref-impl#2: point `.github/ruhnu-deps.env` back at `ruhnu` once cdoc2-openapi#2 and cdoc2-auth#2 are merged.
+- [x] 7.8 cdoc2-auth: a `ruhnu/pk/` or `ruhnu/did/` token whose disclosed `aud` element is not a string, such as `[null]`, is refused with a `VerificationException` (401), not a `NullPointerException` (500). Verify: `DidAuthTokenVerifierTest`, `SshPkAuthTokenVerifierTest`, both failing without the fix.
+- [x] 7.9 cdoc2-auth: text from a DID document (document `id`, verification method ids, `controller`, `crv`, JWK parse errors) is shortened and has its control and format characters escaped before it goes into a resolution reason or a skipped entry, so a DID document cannot forge shares-server log lines or hide the CLI's "Pinned" lines with ANSI escapes. Verify: `DidDocumentKeysTest`, `DidWebResolverTest`.
+- [x] 7.10 ruhnu-demo: `demo.sh` and `revoke.sh` match the nonce 404 message of 7.5 ("refused share ID ...") and fail with the CLI output if it is missing. Verify: `build.sh`, `up.sh`, `demo.sh`, `revoke.sh`, `did.sh` pass.
 
 ## Workflow follow-up
 
