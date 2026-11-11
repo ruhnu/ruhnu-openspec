@@ -130,6 +130,16 @@ Every task in this group is verified with the flag on, and with at least one tes
 - [x] 6.5 Compromised host: add a second P-256 key, not held by the test agent, to `did.json`. Confirm that an agent holding only that key cannot decrypt the existing container. Confirm also that a token for an existing share, signed by that key with its own DID identifier, is refused with 404. Verify: a scripted run shows both refusals.
 - [x] 6.6 Regression check: the phase 1 `ruhnu/pk/` flow (`demo.sh` with expiry, `revoke.sh`) passes on the same stack, and the shares-server suite passes with the flag off and with `CDOC2_RUHNU_ENABLED=true`. Verify: both runs pass.
 
+## 7. Review fixes (issue #4 review, after phase 1 merged)
+
+- [x] 7.1 Specs: the phase 1 review fixes refuse every `ruhnu/` kind but `ruhnu/pk/` ("Recipient length"); the delta now accepts `ruhnu/did/` there, and widens "Malformed audience refused on the SSH path" to the DID path. Verify: `openspec validate --strict`.
+- [x] 7.2 cdoc2-auth: `DidWeb` refuses `.` and `..` path segments, also percent-encoded, and segments that decode to `/`, `\`, `?`, `#` or `;`, so `did:web:example.org:p:alice:..:mallory` cannot name Mallory's document. Verify: `DidWebTest`.
+- [x] 7.3 cdoc2-shares-server: `spring.jpa.open-in-view=false`, so a get-share does not hold a database connection while the DID document is fetched. Verify: a concurrent request is not blocked by a slow DID host with a small pool.
+- [x] 7.4 cdoc2-shares-server tests: DID tests for a malformed `aud` (401, no DID fetch); `shouldReturn404WhenHostRemovedFromList` checks that no DID request was made in a way that can fail. CHANGELOG entry for DID recipients.
+- [x] 7.5 cdoc2-java-ref-impl: a nonce 404 (share expired or deleted) gives a readable error instead of a stack trace; the create 400 hint no longer blames the DID host outright; a malformed `ruhnu/` recipient in a container is reported, not silently skipped; `SshDidEncryptionKeyMaterial` refuses a zero or negative lifetime; README lifetimes for DID shares (3 years by default, at most 5); CHANGELOG entry. Verify: lib and CLI tests.
+- [x] 7.6 cdoc2-java-ref-impl tests: RUHNU `ruhnu/did/` round-trip through the container header; the "no request" and "no upload" assertions for malformed recipients and DID failures can fail.
+- [ ] 7.7 Before merging cdoc2-shares-server#6 and cdoc2-java-ref-impl#2: point `.github/ruhnu-deps.env` back at `ruhnu` once cdoc2-openapi#2 and cdoc2-auth#2 are merged.
+
 ## Workflow follow-up
 
 - Update the CDOC2-ssh handoff notes with what the phase 2 demo shows.
