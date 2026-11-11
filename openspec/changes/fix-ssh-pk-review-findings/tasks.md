@@ -1,6 +1,6 @@
 # Tasks
 
-Code is in cdoc2-shares-server, branch `feat/add-ssh-pk-recipient`.
+Code for groups 1 and 2 is in cdoc2-shares-server, branch `feat/add-ssh-pk-recipient`.
 
 ## 1. Finding 2: default lifetime never exceeds the maximum (cdoc2-shares-server)
 
@@ -15,6 +15,14 @@ Code is in cdoc2-shares-server, branch `feat/add-ssh-pk-recipient`.
 - [x] 2.1 Add a parameterized test to `RuhnuSshPkApiTests` that sends validly signed `ruhnu/pk/` tokens whose `aud` nonce is `!!!`, `x&=`, `a&nonce=b` and `%%%`, and asserts 401 with no share and no audit log entry. Verify: before the fix the first three fail with 500.
 - [x] 2.2 In `ValidateAuthToken.executeSshPk`, map every exception from parsing the `aud` URL, and from decoding the nonce as base64url, to `VerificationException` (design D2). Leave `execute`, `checkTokenAudience` and `checkNonceFromDB` unchanged. Verify: the test from 2.1 passes, and `shouldReturn404ForUnknownNonce` and `shouldReturn404ForNonceIssuedForAnotherShare` still pass.
 - [x] 2.3 Run the shares-server build with checkstyle and spotbugs. Verify: `mvn verify` succeeds for the module.
+
+## 3. Finding 3: `.pub` file with a non-ASCII comment (cdoc2-java-ref-impl)
+
+Code is in cdoc2-java-ref-impl, branch `feat/add-ssh-pk-recipient`.
+
+- [x] 3.1 Add a test to `SshPkKeySharesTest` that writes a key file with the comment `jüri@sülearvuti`, once as UTF-8 and once as ISO-8859-1, and asserts `EncryptionKeyMaterial.fromSshPublicKeyFile` gives the same recipient id as the plain key. Add a test to `SshPkCliTest` that runs `create --ssh-pubkey <file>` with such a file and asserts exit code 0 and the recipient in the create-share request. Verify: before the fix both fail with `MalformedInputException`.
+- [x] 3.2 Read the public key file as ISO-8859-1 in `CDocCreateCmd.sshRecipient` and `EncryptionKeyMaterial.fromSshPublicKeyFile` (design D3). Verify: the tests from 3.1 pass.
+- [x] 3.3 Build cdoc2-lib and cdoc2-cli with their tests and checkstyle. Verify: `mvn install` succeeds for both modules.
 
 ## Workflow follow-up
 

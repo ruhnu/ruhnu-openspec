@@ -4,6 +4,8 @@
 
 See proposal.md for the findings. This document records the decision taken for each one. It grows as findings are added.
 
+Findings 1 and 2 are in cdoc2-shares-server, finding 3 in cdoc2-java-ref-impl.
+
 In cdoc2-shares-server, `KeyShareApiService.getExpiryTime` picks a default and a maximum duration: the `cdoc2.ruhnu.pk.*` pair for a `ruhnu/pk/` recipient when the flag is on, otherwise the global `key-share.*` pair. The maximum is compared only with a client-requested `x-expiry-time`. The comparison logic is inherited from upstream.
 
 ## Goals / Non-Goals
@@ -35,6 +37,14 @@ For `ruhnu/pk/` shares the effective default is `min(default, max)`.
 - **Why only `executeSshPk`:** the shared `checkNonceFromDB`, the Smart-ID/Mobile-ID `execute` and `ShareAccessData` in cdoc2-auth have the same gaps, but they are upstream code and reachable only with a trusted certificate. The spec requires the same response statuses as upstream with the flag off, so they are left as they are. Considered and rejected: fixing `ShareAccessData.fromURL` in cdoc2-auth, or catching in `checkNonceFromDB`, both of which would change the Smart-ID/Mobile-ID path.
 - **Why a broad catch around parsing is safe:** the block contains only URL parsing and base64 decoding, no database access and no security decision. The deliberate `ResponseStatusException(NOT_FOUND)` for an unknown or expired nonce is thrown later, in the shared check, and passes through unchanged.
 - **Logging:** the failure is logged like other verification failures, at `WARN` without a stack trace.
+
+### D3 (finding 3): read the public key file as ISO-8859-1
+
+`CDocCreateCmd.sshRecipient` (cdoc2-cli) and `EncryptionKeyMaterial.fromSshPublicKeyFile` (cdoc2-lib) read the file with ISO-8859-1 instead of US-ASCII.
+
+- **Why ISO-8859-1, not UTF-8:** ISO-8859-1 maps every byte to a character, so reading never fails. UTF-8 would accept `jüri@sülearvuti` saved as UTF-8 but still fail on a comment saved in a legacy encoding. The comment is discarded, so how it decodes does not matter.
+- **Why this is safe:** the key type and the base64 key are ASCII. A non-ASCII byte in either of them reaches the parser and is refused there with the readable "not an OpenSSH public key" error, as before for other malformed input.
+- **No spec delta:** the existing requirements already describe the intended behaviour.
 
 ## Risks / Trade-offs
 
