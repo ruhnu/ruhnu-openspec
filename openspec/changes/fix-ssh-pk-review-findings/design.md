@@ -4,7 +4,7 @@
 
 See proposal.md for the findings. This document records the decision taken for each one. It grows as findings are added.
 
-Findings 1 and 2 are in cdoc2-shares-server, finding 3 in cdoc2-java-ref-impl.
+Findings 1, 2 and 8 are in cdoc2-shares-server; findings 3, 5, 9 and 10 in cdoc2-java-ref-impl.
 
 In cdoc2-shares-server, `KeyShareApiService.getExpiryTime` picks a default and a maximum duration: the `cdoc2.ruhnu.pk.*` pair for a `ruhnu/pk/` recipient when the flag is on, otherwise the global `key-share.*` pair. The maximum is compared only with a client-requested `x-expiry-time`. The comparison logic is inherited from upstream.
 
@@ -45,6 +45,32 @@ For `ruhnu/pk/` shares the effective default is `min(default, max)`.
 - **Why ISO-8859-1, not UTF-8:** ISO-8859-1 maps every byte to a character, so reading never fails. UTF-8 would accept `jüri@sülearvuti` saved as UTF-8 but still fail on a comment saved in a legacy encoding. The comment is discarded, so how it decodes does not matter.
 - **Why this is safe:** the key type and the base64 key are ASCII. A non-ASCII byte in either of them reaches the parser and is refused there with the readable "not an OpenSSH public key" error, as before for other malformed input.
 - **No spec delta:** the existing requirements already describe the intended behaviour.
+
+### D4 (finding 5): split `--ssh-agent` into a flag and `--ssh-agent-socket`
+
+`--ssh-agent` becomes a flag without a value (uses `$SSH_AUTH_SOCK`), and `--ssh-agent-socket <path>` selects another socket. Both are in the existing exclusive group of decryption options, so picocli refuses giving both.
+
+- **Why split, not keep one option with the socket only in the `=` form:** an option with an optional value cannot tell a socket path from a following positional argument. Accepting the value only after `=` needs a custom parser hook, which is more code and easy to get subtly wrong. Two options remove the ambiguity entirely.
+- **Breaking change accepted:** `--ssh-agent=<path>` stops working. The feature is unreleased and no script in the workspace uses that form.
+- **Not changed:** upstream's `-pw`/`--password` has the same optional-value pattern; it is upstream code and left as it is.
+
+### D5 (finding 8): complete the recipient checks for the flag-on case
+
+On create, with the flag on: a `ruhnu/pk/` recipient is validated as before; any other recipient starting with `ruhnu/` is refused with 400; every other recipient gets the upstream 32-character check. With the flag off only the 32-character check runs, as before.
+
+- **Why refuse every other `ruhnu/` kind:** `ruhnu/` is the fork's namespace and `pk` is its only kind, so anything else there is a typo or a client from a newer version. Refusing it surfaces the mistake at encrypt time instead of storing a share nothing can release.
+- **Follow-up:** a new recipient kind (for example from `add-did-recipient`) must add its own branch to this check.
+
+### D6 (finding 9): an empty mpint is a malformed signature
+
+`SshAgentJWSSigner.toJwsSignature` also turns `NumberFormatException` (thrown by `new BigInteger(byte[])` for a zero-length value) into the existing `JOSEException("Malformed ssh-agent ECDSA signature")`. A zero `r` or `s` is invalid ECDSA anyway, and the existing check already refuses non-positive values.
+
+### D7 (finding 10): check the lifetime early, warn where the response is read
+
+- **Non-positive lifetime:** refused in the CLI by a converter for `--share-expiry` only (`PositiveDurationConverter`), so the user gets picocli's usage error before anything is sent. The converter of upstream's `--expiry` for key capsules is left unchanged. `SshPkEncryptionKeyMaterial` refuses it too, with `IllegalArgumentException`, for applications using cdoc2-lib directly.
+- **Shortened lifetime:** `Cdoc2KeySharesApiClient.createKeyShare` logs a `WARN` naming the server and the expiry time when the response has `x-expiry-time-adjusted: true` for a request that set `x-expiry-time`. The header lookup ignores case, because the generated client copies headers into a case-sensitive map.
+- **Why warn, not return the applied expiry to the caller:** returning it would change return types through the API client, the shares client and the recipient builder, mostly in upstream files. A warning closes the gap (the sender learns that access is shorter) with a few lines.
+- **Testing note:** the warning is asserted in cdoc2-lib (`SshPkKeySharesTest`) with a logback `ListAppender`. The CLI's test logger configuration (upstream file) caches the original `System.err`, so CLI tests cannot capture log output; it is left unchanged.
 
 ## Risks / Trade-offs
 

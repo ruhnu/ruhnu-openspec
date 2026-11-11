@@ -24,7 +24,29 @@ Code is in cdoc2-java-ref-impl, branch `feat/add-ssh-pk-recipient`.
 - [x] 3.2 Read the public key file as ISO-8859-1 in `CDocCreateCmd.sshRecipient` and `EncryptionKeyMaterial.fromSshPublicKeyFile` (design D3). Verify: the tests from 3.1 pass.
 - [x] 3.3 Build cdoc2-lib and cdoc2-cli with their tests and checkstyle. Verify: `mvn install` succeeds for both modules.
 
+## 4. Finding 8: recipient checks with the flag on (cdoc2-shares-server)
+
+- [x] 4.1 Add a test to `RuhnuSshPkApiTests` that creates shares for `ruhnu/pK/<valid blob>`, `ruhnu/xyz/whatever` and a 42-character `etsi/` recipient and asserts 400 for each and nothing stored. Verify: before the fix the first is accepted with 201.
+- [x] 4.2 In `KeyShareApiService.createKeyShare`, refuse other `ruhnu/` kinds and apply the 32-character limit to every non-`ruhnu/pk/` recipient (design D5). Add a line to `admin-guide.md`. Verify: the test from 4.1 passes, the flag-off tests in `RuhnuDisabledApiTests` still pass, and `mvn verify` succeeds with checkstyle and spotbugs.
+
+## 5. Finding 5: `--ssh-agent` flag and `--ssh-agent-socket` (cdoc2-java-ref-impl)
+
+- [x] 5.1 Add a test to `SshPkCliTest` that runs `decrypt ... --ssh-agent payload.txt` and asserts the error does not say it cannot connect to `payload.txt`. Verify: before the fix it does.
+- [x] 5.2 Make `--ssh-agent` a flag and add `--ssh-agent-socket <path>` in `DecryptionKeyExclusiveArgument` (design D4); switch the existing tests from `--ssh-agent=<socket>` to `--ssh-agent-socket=<socket>`; update the CLI README. Verify: all `SshPkCliTest` tests pass.
+
+## 6. Finding 9: empty value in the ssh-agent signature (cdoc2-java-ref-impl)
+
+- [x] 6.1 Add a test to `SshAgentClientTest` that passes a signature blob with an empty `r`, then an empty `s`, to `SshAgentJWSSigner.toJwsSignature` and asserts `JOSEException("Malformed ssh-agent ECDSA signature")`. Verify: before the fix it fails with `NumberFormatException`.
+- [x] 6.2 Catch `NumberFormatException` in `toJwsSignature` (design D6). Verify: the test from 6.1 and all `SshAgentClientTest` tests pass.
+
+## 7. Finding 10: requested share lifetime checked and reported (cdoc2-java-ref-impl)
+
+- [x] 7.1 Add a test to `SshPkCliTest` that runs `create` with `--share-expiry PT0S` and `-P1D` and asserts a non-zero exit code, an error saying the duration must be positive, no stack trace and no create-share request. Verify: before the fix `PT0S` is accepted.
+- [x] 7.2 Add `PositiveDurationConverter` for `--share-expiry`, and a check in `SshPkEncryptionKeyMaterial` (design D7). Add a test to `SshPkKeySharesTest` that `fromSshPublicKey` refuses a zero and a negative lifetime. Verify: the tests pass.
+- [x] 7.3 In `Cdoc2KeySharesApiClient.createKeyShare`, log a warning naming the server and the applied expiry when the response reports `x-expiry-time-adjusted: true` (design D7). Add a test to `SshPkKeySharesTest` where one of two stubbed servers reports an adjusted expiry, asserting exactly one warning with that server and expiry. Update the CLI README. Verify: the test passes. (The warning was first observed missing through a CLI test, which could not capture log output and was replaced by this one.)
+- [x] 7.4 Build cdoc2-client, cdoc2-lib and cdoc2-cli with their tests and checkstyle. Verify: `mvn install` succeeds for all three.
+
 ## Workflow follow-up
 
 - Comment on ruhnu-openspec#1 with the outcome for each finding handled here.
-- Archive the change after the cdoc2-shares-server PR is merged into `ruhnu`, so the delta lands in `openspec/specs/key-share-expiry/spec.md`.
+- Archive the change after the cdoc2-shares-server and cdoc2-java-ref-impl PRs are merged into `ruhnu`, so the deltas land in the main specs.

@@ -44,7 +44,7 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
 ## Workflow follow-up
 
 - Decide the fork release tag scheme for `v*` tags (design, Open Questions) before the first `v*` tag.
-- When the siblings' `feat/add-ssh-pk-recipient` branches are merged or released, update `.github/ruhnu-deps.env` in cdoc2-java-ref-impl and cdoc2-shares-server together.
+- When the siblings' `feat/add-ssh-pk-recipient` branches are merged or released, update `.github/ruhnu-deps.env` in cdoc2-java-ref-impl and cdoc2-shares-server together. Do it on the feature branches before their PRs merge into `ruhnu`, after the cdoc2-openapi and cdoc2-auth PRs have merged, so that `ruhnu` never carries feature-branch refs.
 - Decide how to pin the build inputs of both image workflows (ruhnu-cli and ruhnu-shares-server) properly, as a separate change. The quick threat assessment of 2026-11-10 rated unpinned inputs high risk. Options discussed on 2026-11-10:
   - **Sibling repos** (cdoc2-auth, cdoc2-openapi), from simplest to strongest:
     - Branch plus SHA in `ruhnu-deps.env`, rewritten by a script that runs `git ls-remote` on each branch before tagging. CI checks out the SHA and checks that it is on the named branch. Recommended first step.
