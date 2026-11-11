@@ -20,7 +20,7 @@ When the feature flag is enabled and an auth token takes the SSH public key path
 ## MODIFIED Requirements
 
 ### Requirement: Recipient length
-When the feature flag is enabled, the shares server SHALL accept and store recipients of up to 255 characters, so that a `ruhnu/pk/` identifier for a P-256 key fits. Only `ruhnu/pk/` recipients SHALL be longer than 32 characters; any other recipient starting with `ruhnu/` SHALL be refused with 400 Bad Request, and any other recipient longer than 32 characters SHALL be refused with 400 Bad Request, as upstream. While the flag is off, recipients longer than 32 characters SHALL be refused with 400 Bad Request, as upstream.
+When the feature flag is enabled, the shares server SHALL accept and store `ruhnu/pk/` recipients of up to 255 characters, so that an identifier for a P-256 key fits, and SHALL refuse with 400 Bad Request any other recipient that starts with `ruhnu/` or is longer than 32 characters. While the flag is off, recipients longer than 32 characters SHALL be refused with 400 Bad Request, as upstream.
 
 #### Scenario: Create a share with a P-256 SSH recipient
 - **WHEN** the flag is on and a client creates a share whose recipient is a `ruhnu/pk/` identifier for a P-256 key
