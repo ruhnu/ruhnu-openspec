@@ -10,6 +10,12 @@ Code is in cdoc2-shares-server, branch `feat/add-ssh-pk-recipient`.
 - [x] 1.4 In `admin-guide.md`, in the `cdoc2.ruhnu.pk.*` lifetimes bullet, state that a default longer than the maximum is replaced by the maximum and logged as a warning at startup. Add a CHANGELOG line if the unreleased entry lists the `cdoc2.ruhnu.pk.*` properties. Verify: the guide text matches the behaviour tested in 1.1 and 1.3.
 - [x] 1.5 Run the shares-server build with checkstyle and spotbugs. Verify: `mvn verify` succeeds for the module.
 
+## 2. Finding 1: malformed `aud` refused with 401 on the SSH path (cdoc2-shares-server)
+
+- [x] 2.1 Add a parameterized test to `RuhnuSshPkApiTests` that sends validly signed `ruhnu/pk/` tokens whose `aud` nonce is `!!!`, `x&=`, `a&nonce=b` and `%%%`, and asserts 401 with no share and no audit log entry. Verify: before the fix the first three fail with 500.
+- [x] 2.2 In `ValidateAuthToken.executeSshPk`, map every exception from parsing the `aud` URL, and from decoding the nonce as base64url, to `VerificationException` (design D2). Leave `execute`, `checkTokenAudience` and `checkNonceFromDB` unchanged. Verify: the test from 2.1 passes, and `shouldReturn404ForUnknownNonce` and `shouldReturn404ForNonceIssuedForAnotherShare` still pass.
+- [x] 2.3 Run the shares-server build with checkstyle and spotbugs. Verify: `mvn verify` succeeds for the module.
+
 ## Workflow follow-up
 
 - Comment on ruhnu-openspec#1 with the outcome for each finding handled here.
