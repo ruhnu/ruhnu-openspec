@@ -21,7 +21,7 @@ This is phase 2 of the CDOC2-ssh work, which phase 1 (`add-ssh-pk-recipient`) re
 - `cdoc2-cli` can encrypt to a DID. It resolves the DID and creates one recipient per P-256 key listed under `authentication`, printing the pinned fingerprints. The DID host is trusted at that moment; this is an accepted trade-off (see design).
 - `cdoc2-cli` decrypts `ruhnu/did/` recipients through ssh-agent, as in phase 1. It finds the agent key by fingerprint and does not resolve the DID itself. The auth token carries the public key in the JWS `jwk` header, because the identifier holds only its hash.
 - With the flag on, the shares server:
-  - accepts `ruhnu/did/` shares only for DID hosts in a new allowlist, `cdoc2.ruhnu.did.allowed-hosts`, which is empty by default;
+  - accepts `ruhnu/did/` shares only for DID hosts in a new allowlist, `cdoc2.ruhnu.did.allowed-hosts` (host names or `*.<domain>` wildcards), which is empty by default;
   - issues nonces for them without session headers, as for `ruhnu/pk/`;
   - verifies the token, then fetches the DID document over HTTPS on every share download, with no cache;
   - returns `404` when the DID document is missing or no longer lists the key, and `503` when the DID host cannot be reached;

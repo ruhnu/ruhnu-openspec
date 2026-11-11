@@ -143,6 +143,11 @@ Every task in this group is verified with the flag on, and with at least one tes
 - [x] 7.9 cdoc2-auth: text from a DID document (document `id`, verification method ids, `controller`, `crv`, JWK parse errors) is shortened and has its control and format characters escaped before it goes into a resolution reason or a skipped entry, so a DID document cannot forge shares-server log lines or hide the CLI's "Pinned" lines with ANSI escapes. Verify: `DidDocumentKeysTest`, `DidWebResolverTest`.
 - [x] 7.10 ruhnu-demo: `demo.sh` and `revoke.sh` match the nonce 404 message of 7.5 ("refused share ID ...") and fail with the CLI output if it is missing. Verify: `build.sh`, `up.sh`, `demo.sh`, `revoke.sh`, `did.sh` pass.
 
+## 8. Wildcard allowlist entries (user decision 2026-11-11, design D7)
+
+- [ ] 8.1 cdoc2-shares-server: `DidHostAllowlist` accepts `*.<domain>[:port]` entries, matching exactly one DNS label, with `<domain>` of at least two labels; `*`, `*.org` and `a.*.org` are refused at startup. Verify: tests for every scenario under "Wildcard DID host entries", including create tests through the API.
+- [ ] 8.2 Docs: the admin guide describes wildcard entries, with the warning against wildcard DNS services such as `nip.io`; the `RUHNU_DID_ALLOWED_HOSTS` comment in ruhnu-ops' `.env.example` no longer says wildcards stop the server. Verify: both documents match the scenarios.
+
 ## Workflow follow-up
 
 - Update the CDOC2-ssh handoff notes with what the phase 2 demo shows.
