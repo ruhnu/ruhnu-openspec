@@ -183,7 +183,7 @@ When the feature flag is enabled, the server SHALL release a `ruhnu/did/` share 
 - **THEN** the server responds 401 Unauthorized and sends no request to the DID host
 
 ### Requirement: DID host allowlist
-When the feature flag is enabled, the shares server SHALL have a configuration option `cdoc2.ruhnu.did.allowed-hosts`: a list of host names, each optionally with a port, empty by default. The server SHALL store a `ruhnu/did/` share only if its recipient is a valid DID recipient identifier whose DID host and port are in the list. It SHALL NOT send a request to a DID host that is not in the list.
+When the feature flag is enabled, the shares server SHALL have a configuration option `cdoc2.ruhnu.did.allowed-hosts`: a list of host entries, each optionally with a port, empty by default. The server SHALL store a `ruhnu/did/` share only if its recipient is a valid DID recipient identifier whose DID host and port match an entry in the list. It SHALL NOT send a request to a DID host that matches no entry.
 
 #### Scenario: Share for an allowed host
 - **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `example.org` and a client creates a share whose recipient is `ruhnu/did/did:web:example.org:p:alice/hash/<fingerprint>`
@@ -208,3 +208,18 @@ When the feature flag is enabled, the shares server SHALL have a configuration o
 #### Scenario: Host removed from the list after the share was created
 - **WHEN** a `ruhnu/did/` share was created while its host was in `cdoc2.ruhnu.did.allowed-hosts`, the host has since been removed from the list, and a caller presents a token that passes every other check
 - **THEN** the server responds 404 Not Found, does not return the share, and sends no request to the DID host
+
+### Requirement: Wildcard DID host entries
+An entry in `cdoc2.ruhnu.did.allowed-hosts` MAY be a wildcard `*.<domain>`, where `<domain>` has at least two labels. A wildcard entry SHALL match a host that consists of exactly one DNS label followed by `.<domain>`, and no other host. The server SHALL NOT start with a malformed entry.
+
+#### Scenario: Host matched by a wildcard entry
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `*.github.io` and a client creates a share whose recipient's DID is `did:web:alice.github.io`
+- **THEN** the server stores the share
+
+#### Scenario: Wildcard does not match the domain itself or deeper subdomains
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `*.github.io` but no other entry for these hosts, and a client creates a share whose recipient's DID is `did:web:github.io:p:alice` or `did:web:a.b.github.io`
+- **THEN** the server responds 400 Bad Request and stores nothing
+
+#### Scenario: Malformed allowlist entry
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains an entry such as `*`, `*.org` or `a.*.org`
+- **THEN** the server does not start
