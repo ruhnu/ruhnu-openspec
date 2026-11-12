@@ -1,5 +1,10 @@
 # Spec Delta
 
+## RENAMED Requirements
+
+- FROM: `### Requirement: Malformed audience refused on the SSH path`
+- TO: `### Requirement: Malformed audience refused on the SSH and DID paths`
+
 ## MODIFIED Requirements
 
 ### Requirement: Fork behaviour behind a feature flag
@@ -90,6 +95,48 @@ When the feature flag is enabled, the shares server SHALL log every successful s
 - **WHEN** the flag is on and the server refuses a share request, including a `ruhnu/did/` request refused because of the DID check
 - **THEN** no release entry is written for that request
 
+### Requirement: Recipient length
+When the feature flag is enabled, the shares server SHALL accept and store `ruhnu/pk/` and `ruhnu/did/` recipients of up to 255 characters, so that an identifier for a P-256 key or a DID recipient identifier fits, and SHALL refuse with 400 Bad Request any other recipient that starts with `ruhnu/` or is longer than 32 characters. While the flag is off, recipients longer than 32 characters SHALL be refused with 400 Bad Request, as upstream.
+
+#### Scenario: Create a share with a P-256 SSH recipient
+- **WHEN** the flag is on and a client creates a share whose recipient is a `ruhnu/pk/` identifier for a P-256 key
+- **THEN** the server stores the share and later compares the full recipient, without truncating it
+
+#### Scenario: Create a share with a DID recipient
+- **WHEN** the flag is on and a client creates a share whose recipient is a valid `ruhnu/did/` identifier for a DID on a host in `cdoc2.ruhnu.did.allowed-hosts`
+- **THEN** the server stores the share and later compares the full recipient, without truncating it
+
+#### Scenario: Invalid SSH public key recipient
+- **WHEN** the flag is on and a client creates a share whose recipient starts with `ruhnu/pk/` but is not a P-256 OpenSSH public key in canonical form (padded standard base64), for example an Ed25519 key, a P-384 key, malformed base64 or a truncated blob
+- **THEN** the server responds 400 Bad Request and stores nothing
+
+#### Scenario: Unknown ruhnu recipient kind
+- **WHEN** the flag is on and a client creates a share whose recipient starts with `ruhnu/` but with neither `ruhnu/pk/` nor `ruhnu/did/`, for example `ruhnu/pK/AAAA...` or `ruhnu/xyz/abc`
+- **THEN** the server responds 400 Bad Request and stores nothing
+
+#### Scenario: Long non-SSH recipient while on
+- **WHEN** the flag is on and a client creates a share whose recipient does not start with `ruhnu/` and is longer than 32 characters
+- **THEN** the server responds 400 Bad Request and stores nothing, as upstream
+
+#### Scenario: Long recipient while off
+- **WHEN** the flag is off and a client creates a share whose recipient is longer than 32 characters
+- **THEN** the server responds 400 Bad Request
+
+### Requirement: Malformed audience refused on the SSH and DID paths
+When the feature flag is enabled and an auth token takes the SSH public key path or the DID path, the server SHALL respond 401 Unauthorized if the token's `aud` cannot be parsed into a server URL, a shareId and a base64url nonce. It SHALL NOT respond with a server error, SHALL NOT fetch the DID document, and SHALL NOT return the share. The Smart-ID/Mobile-ID path SHALL keep its existing behaviour.
+
+#### Scenario: Nonce is not base64url
+- **WHEN** the flag is on and a caller presents a validly signed `ruhnu/pk/` or `ruhnu/did/` token whose `aud` carries a nonce that is not base64url, for example `?nonce=!!!`
+- **THEN** the server responds 401 Unauthorized
+
+#### Scenario: Malformed query in the audience
+- **WHEN** the flag is on and a caller presents a validly signed `ruhnu/pk/` or `ruhnu/did/` token whose `aud` query has a parameter without a name, a duplicated `nonce` parameter or invalid percent-encoding
+- **THEN** the server responds 401 Unauthorized
+
+#### Scenario: Well-formed but unknown nonce unchanged
+- **WHEN** the flag is on and the token's `aud` carries a well-formed nonce that this server did not issue for this share or that has expired
+- **THEN** the server does not return the share and responds as before this change, as for existing recipients
+
 ## ADDED Requirements
 
 ### Requirement: Share release for DID shares
@@ -136,7 +183,7 @@ When the feature flag is enabled, the server SHALL release a `ruhnu/did/` share 
 - **THEN** the server responds 401 Unauthorized and sends no request to the DID host
 
 ### Requirement: DID host allowlist
-When the feature flag is enabled, the shares server SHALL have a configuration option `cdoc2.ruhnu.did.allowed-hosts`: a list of host names, each optionally with a port, empty by default. The server SHALL store a `ruhnu/did/` share only if its recipient is a valid DID recipient identifier whose DID host and port are in the list. It SHALL NOT send a request to a DID host that is not in the list.
+When the feature flag is enabled, the shares server SHALL have a configuration option `cdoc2.ruhnu.did.allowed-hosts`: a list of host entries, each optionally with a port, empty by default. The server SHALL store a `ruhnu/did/` share only if its recipient is a valid DID recipient identifier whose DID host and port match an entry in the list. It SHALL NOT send a request to a DID host that matches no entry.
 
 #### Scenario: Share for an allowed host
 - **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `example.org` and a client creates a share whose recipient is `ruhnu/did/did:web:example.org:p:alice/hash/<fingerprint>`
@@ -161,3 +208,18 @@ When the feature flag is enabled, the shares server SHALL have a configuration o
 #### Scenario: Host removed from the list after the share was created
 - **WHEN** a `ruhnu/did/` share was created while its host was in `cdoc2.ruhnu.did.allowed-hosts`, the host has since been removed from the list, and a caller presents a token that passes every other check
 - **THEN** the server responds 404 Not Found, does not return the share, and sends no request to the DID host
+
+### Requirement: Wildcard DID host entries
+An entry in `cdoc2.ruhnu.did.allowed-hosts` MAY be a wildcard `*.<domain>`, where `<domain>` has at least two labels. A wildcard entry SHALL match a host that consists of exactly one DNS label followed by `.<domain>`, and no other host. The server SHALL NOT start with a malformed entry.
+
+#### Scenario: Host matched by a wildcard entry
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `*.github.io` and a client creates a share whose recipient's DID is `did:web:alice.github.io`
+- **THEN** the server stores the share
+
+#### Scenario: Wildcard does not match the domain itself or deeper subdomains
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains `*.github.io` but no other entry for these hosts, and a client creates a share whose recipient's DID is `did:web:github.io:p:alice` or `did:web:a.b.github.io`
+- **THEN** the server responds 400 Bad Request and stores nothing
+
+#### Scenario: Malformed allowlist entry
+- **WHEN** `cdoc2.ruhnu.did.allowed-hosts` contains an entry such as `*`, `*.org` or `a.*.org`
+- **THEN** the server does not start

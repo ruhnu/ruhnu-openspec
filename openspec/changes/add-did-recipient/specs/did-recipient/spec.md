@@ -25,6 +25,10 @@ A DID recipient SHALL be stored as a key-shares recipient with the recipient typ
 - **WHEN** the user encrypts to a `did:web` DID whose host is an IP address, such as `did:web:192.0.2.1`
 - **THEN** encryption fails before any share is uploaded, with an error stating the DID is not a valid `did:web` DID
 
+#### Scenario: Dot segment in the DID path
+- **WHEN** the user encrypts to, or a shares server checks, a `did:web` DID with a path segment that is `.` or `..`, also when percent-encoded, or that decodes to `/`, `\`, `?`, `#` or `;`, such as `did:web:example.org:p:alice:..:mallory`
+- **THEN** the DID is not a valid `did:web` DID, so encryption fails before any share is uploaded and a share for it is refused, and its document is never fetched
+
 #### Scenario: Identifier too long
 - **WHEN** the user encrypts to a DID for which the `recipient_id` would be longer than 255 characters
 - **THEN** encryption fails before any share is uploaded, with an error stating the DID is too long
@@ -113,6 +117,10 @@ The CLI SHALL let the user encrypt a container to one or more DIDs. For each DID
 #### Scenario: Requested lifetime
 - **WHEN** the user creates a container for a DID and requests a 3-day share lifetime
 - **THEN** every share upload for the DID's recipients asks the shares server for an expiry 3 days from now
+
+#### Scenario: Zero or negative lifetime refused
+- **WHEN** the user, or a program using the library, encrypts to a DID with a share lifetime of zero or a negative duration
+- **THEN** encryption fails with an error stating that the lifetime must be positive, and no share is uploaded
 
 ### Requirement: Decrypt a DID recipient with ssh-agent
 The client SHALL decrypt a DID recipient through the ssh-agent at `$SSH_AUTH_SOCK`, using the agent key whose fingerprint equals the recipient's `<fingerprint>`. The client SHALL NOT resolve the DID to decrypt. Decryption SHALL NOT require a private key file, Smart-ID, Mobile-ID, an RP server or an auth server.

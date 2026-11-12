@@ -70,8 +70,8 @@ cdoc2-auth gets three pieces, written so that client and server classify every r
 - a pure part: parse the DID, map it to a URL, and extract keys from the document (D3);
 - a fetcher built on `java.net.http.HttpClient`:
   - HTTPS only, `Redirect.NEVER`;
-  - connect and request timeouts, defaulting to 2 s and 5 s; the shares server takes its values from configuration (D7);
-  - a 64 KiB body limit;
+  - a connect timeout (default 2 s) and an overall deadline for the whole fetch, covering connect, headers and body (default 3 s), enforced with `sendAsync(...).get(deadline)`; the shares server takes its values from configuration (D7). The JDK's per-request timeout stops at the response headers, so on its own it would not catch a host that sends the body slowly;
+  - a 64 KiB body limit, enforced while the body is read;
   - the JDK default trust store;
   - `ProxySelector.getDefault()`, so the standard `https.proxyHost` settings work;
 - a result type with three outcomes:
@@ -169,13 +169,14 @@ GET /key-shares/{id}   flag on, unverified iss starts with "ruhnu/did/"
 `cdoc2.ruhnu.did.allowed-hosts` is a list of `host` or `host:port` entries:
 - Host comparison is case-insensitive.
 - The port must match exactly, and a missing port means 443.
+- A host may be a wildcard `*.<domain>` (user decision, 2026-11-11), so that testers can host their own DID documents, for example on GitHub Pages (`*.github.io`), without the operator changing every server's configuration. As with TLS wildcard certificates, it matches exactly one DNS label: `*.github.io` matches `alice.github.io`, but not `github.io` or `a.b.github.io`. `<domain>` needs at least two labels, so `*.org` and `*` are malformed, and a malformed entry stops the server from starting. Use wildcards only for domains where one trusted party controls the DNS of every subdomain, as GitHub does for `github.io`. Never use them for wildcard DNS services such as `nip.io` or `sslip.io`, which resolve names to any IP address, internal ones included: that would reopen the SSRF this allowlist closes.
 - It is checked when a share is created (400) and again before every fetch (404). Removing a host therefore takes effect for existing shares.
 - It is empty by default, so DID recipients stay off until an operator names the hosts they accept.
 
 Further limits:
 - The identifier parser already rejects IP-literal hosts (D1).
 - The fetcher does not follow redirects, caps the body size, and times out.
-- Timeouts are configurable: `cdoc2.ruhnu.did.connect-timeout` defaults to `PT2S`, and `cdoc2.ruhnu.did.request-timeout` to `PT5S`. They stay well below typical client read timeouts.
+- Timeouts are configurable: `cdoc2.ruhnu.did.connect-timeout` defaults to `PT2S`, and `cdoc2.ruhnu.did.request-timeout`, the overall deadline for one fetch, to `PT3S`. A get-share therefore answers within the client's default 5 s read timeout (`KeySharesConfigurationProps`), so a hanging DID host reaches the user as 503 and not as a client timeout.
 
 ### D8. Lifetimes: global pair (user decision)
 
@@ -223,7 +224,7 @@ Tests cover both cases.
 - **[The DID host is trusted at encryption time]** → The CLI prints the pinned fingerprints and `cdoc2 info` shows them. A reviewed recipients file is the follow-up.
 - **[The DID host is a hard dependency for decryption]** → Intended. 503 tells the client to retry, and the token stays usable until the nonce expires. One unreachable host blocks only its own DIDs.
 - **[No cache: one fetch per share per server per decryption]** → Fine for the PoC. A short positive cache is a follow-up if load becomes a problem, at the cost of slower revocation.
-- **[Allowlisted hosts can be probed at any path, at the caller's request rate]** → Anyone can create a share whose DID points to any path on an allowlisted host, and trigger a GET of `<path>/did.json` there. Nonces are not consumed, so one valid token can be replayed until its nonce expires, and each replay causes one fetch: the shares server forwards load to the DID host one-for-one, bounded only by the request rate it accepts. Accepted for the PoC, because the operator chose those hosts. Rate limiting get-share for `ruhnu/did/` is a follow-up, next to phase 1's nonce rate limiting. DNS rebinding of an allowlisted name is the operator's concern (Non-Goals).
+- **[Allowlisted hosts can be probed at any path, at the caller's request rate]** → Anyone can create a share whose DID points to any path on an allowlisted host, and trigger a GET of `<path>/did.json` there. Nonces are not consumed, so one valid token can be replayed until its nonce expires, and each replay causes one fetch: the shares server forwards load to the DID host one-for-one, bounded only by the request rate it accepts. Accepted for the PoC, because the operator chose those hosts. With a wildcard entry the operator no longer chooses each host: anyone who can publish under the domain, for `*.github.io` any GitHub account, can make the server fetch from their site. Rate limiting get-share for `ruhnu/did/` is a follow-up, next to phase 1's nonce rate limiting. DNS rebinding of an allowlisted name is the operator's concern (Non-Goals).
 - **[Long lifetimes depend on revocation discipline]** → With the global pair, shares last up to 5 years. Removing access depends on someone removing the key from the DID document. Stating the maximum in the admin guide keeps that visible.
 - **[Key rotation versus revocation]** → A rotated-away key must stay listed until containers pinned to it are re-encrypted, or they become unreadable. This is the price of a host that can withdraw access but not grant it. The admin guide states it.
 - **[Unauthenticated nonce endpoint for DID shares]** → As in phase 1. The nonce endpoint never resolves DIDs, so it adds no outbound traffic.
