@@ -145,8 +145,8 @@ Every task in this group is verified with the flag on, and with at least one tes
 
 ## 8. Wildcard allowlist entries (user decision 2026-11-11, design D7)
 
-- [ ] 8.1 cdoc2-shares-server: `DidHostAllowlist` accepts `*.<domain>[:port]` entries, matching exactly one DNS label, with `<domain>` of at least two labels; `*`, `*.org` and `a.*.org` are refused at startup. Verify: tests for every scenario under "Wildcard DID host entries", including create tests through the API.
-- [ ] 8.2 Docs: the admin guide describes wildcard entries, with the warning against wildcard DNS services such as `nip.io`; the `RUHNU_DID_ALLOWED_HOSTS` comment in ruhnu-ops' `.env.example` no longer says wildcards stop the server. Verify: both documents match the scenarios.
+- [x] 8.1 cdoc2-shares-server: `DidHostAllowlist` accepts `*.<domain>[:port]` entries, matching exactly one DNS label, with `<domain>` of at least two labels; `*`, `*.org` and `a.*.org` are refused at startup. Verify: tests for every scenario under "Wildcard DID host entries", including create tests through the API.
+- [x] 8.2 Docs: the admin guide describes wildcard entries, with the warning against wildcard DNS services such as `nip.io`; the `RUHNU_DID_ALLOWED_HOSTS` comment in ruhnu-ops' `.env.example` no longer says wildcards stop the server. Verify: both documents match the scenarios.
 
 ## Workflow follow-up
 
