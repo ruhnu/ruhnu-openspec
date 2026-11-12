@@ -103,7 +103,7 @@ When the feature flag is enabled, the server SHALL release a `ruhnu/pk/` share o
 - **THEN** the server responds 401 Unauthorized
 
 ### Requirement: Audit log of released shares
-When the feature flag is enabled, the shares server SHALL log every successful share release, for all recipient types. Each entry SHALL include the shareId, a recipient identifier, and the time of release. For a `ruhnu/pk/` recipient the recipient identifier SHALL be the key's OpenSSH SHA256 fingerprint, as shown by `ssh-keygen -l`. For a `ruhnu/did/` recipient it SHALL be the full `recipient_id`, which names the DID and the key fingerprint. Any other recipient SHALL be logged as redacted, so that personal identification codes of `etsi/` recipients are not written to the log, as in upstream logging.
+When the feature flag is enabled, the shares server SHALL log every successful share release with the shareId, a recipient identifier and the time of release. That identifier SHALL be the key's OpenSSH SHA256 fingerprint, as shown by `ssh-keygen -l`, for a `ruhnu/pk/` recipient, and the full `recipient_id` for a `ruhnu/did/` recipient. Any other recipient SHALL be logged as redacted, so that personal identification codes of `etsi/` recipients stay out of the log, as in upstream logging.
 
 #### Scenario: Release of an SSH public key share is logged
 - **WHEN** the flag is on and the server returns a `ruhnu/pk/` share to a caller
