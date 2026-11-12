@@ -39,7 +39,7 @@ All work is in `cdoc2-java-ref-impl`, on a topic branch. Pushing tags and publis
 
 - [x] 3.1 Make the `ruhnu-cli` package public on ghcr.io (by hand, done by the user). Verify: an anonymous `docker pull ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` succeeds after `docker logout ghcr.io`.
 - [x] 3.2 Run the README commands from 1.4 against ruhnu-demo with the published image instead of the local one. Verify: encryption, decryption through the host agent, the audit lines and the "agent socket not mounted" error all behave as in 1.4.
-- [ ] 3.3 On an arm64 host, if one is available, run `smoke-test.sh` against the published tag. Verify: the script passes, and `docker image inspect` shows `arm64`. If no arm64 host is available, record that in this task and leave it unchecked. (2026-11-10: postponed by the user until after the demo. To be run on the user's arm64 Oracle VM against `ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1`.)
+- [x] 3.3 On an arm64 host, if one is available, run `smoke-test.sh` against the published tag. Verify: the script passes, and `docker image inspect` shows `arm64`. If no arm64 host is available, record that in this task and leave it unchecked. (2026-11-10: postponed by the user until after the demo.) Done 2026-11-11 by the user on an on-premises arm64 (`aarch64`) server, with `smoke-test.sh` from branch `ruhnu`, for `ghcr.io/ruhnu/ruhnu-cli:dev-cli-image-1` and `:dev-did-1`. Both images inspect as `linux/arm64`, print `cdoc2-cli version: 1.10.0-SNAPSHOT`, report "No matching key found in ssh-agent" with a mounted agent and "ssh-agent is not available" without one, and pass the smoke test.
 
 ## Workflow follow-up
 
